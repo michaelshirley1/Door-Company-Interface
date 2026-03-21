@@ -1,47 +1,61 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutProps } from "./model";
 
 import "./style.scss"
 
 
 export default function Layout({ children }: LayoutProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
   return (
     <div className="layout-wrapper">
         <div className="layout">
             <div className="layout-toolbar">
                 <button
-                    onClick={() => window.location.href = "/"}
+                    className="layout-logo"
+                    onClick={() => navigate("/")}
                 >
                     DoorStop
                 </button>
                 <div className="layout-tabs">
                     <button
-                        onClick={() => window.location.href = "/"}
+                        className={isActive('/') ? 'active' : ''}
+                        onClick={() => navigate("/")}
                     >
                         Home
                     </button>
                     <button
-                        onClick={() => window.location.href = "/job"}
+                        className={isActive('/job') ? 'active' : ''}
+                        onClick={() => navigate("/job")}
                     >
                         Jobs
                     </button>
                     <button
-                        onClick={() => window.location.href = "/quote"}
+                        className={isActive('/quote') ? 'active' : ''}
+                        onClick={() => navigate("/quote")}
                     >
                         Quotes
                     </button>
                     <button
-                        onClick={() => window.location.href = "/invoice"}
+                        className={isActive('/invoice') ? 'active' : ''}
+                        onClick={() => navigate("/invoice")}
                     >
                         Invoices
                     </button>
                     <button
-                        onClick={() => window.location.href = "/purchase-order"}
+                        className={isActive('/purchase-order') ? 'active' : ''}
+                        onClick={() => navigate("/purchase-order")}
                     >
                         Purchase Orders
                     </button>
                 </div>
             </div>
-            {children}
+            <div className="layout-content">
+                {children}
+            </div>
         </div>
     </div>
   );
