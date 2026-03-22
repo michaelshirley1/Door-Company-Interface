@@ -1,0 +1,31 @@
+.page-wrapper {
+    padding: 24px;
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #1a1a2e;
+        }
+    }
+
+    .btn-primary {
+        padding: 10px 20px;
+        background: #1a1a2e;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+
+        &:hover {
+            background: #2d2d4e;
+        }
+    }
+}

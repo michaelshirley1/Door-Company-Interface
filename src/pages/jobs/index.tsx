@@ -1,5 +1,7 @@
 import React from 'react';
 import { JobPageProps, Job } from './model';
+import { PageWrapper } from '../../components/page-wrapper';
+import { Table } from '../../components/table';
 
 import './styles.scss';
 
@@ -13,38 +15,23 @@ const jobs: Job[] = [
 
 const JobPage: React.FC<JobPageProps> = () => {
     return (
-        <div className="jobs-page">
-            <div className="page-header">
-                <h1>Jobs</h1>
-                <button className="btn-primary">New Job</button>
-            </div>
-            <div className="table-container">
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Customer</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Start Date</th>
-                            <th>Due Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {jobs.map((job) => (
-                            <tr key={job.id}>
-                                <td>{job.id}</td>
-                                <td>{job.customer}</td>
-                                <td>{job.description}</td>
-                                <td><span className={`status-badge ${job.status.toLowerCase().replace(' ', '-')}`}>{job.status}</span></td>
-                                <td>{job.startDate}</td>
-                                <td>{job.dueDate}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <PageWrapper 
+            title="Jobs" 
+            buttonTitle='New Job'
+            buttonAction={()=>{}}
+        >
+            <Table
+                headers={[
+                    {id: "id", title: "ID" },
+                    {id: "customer", title: "Customer" },
+                    {id: "description", title: "Description" },
+                    {id: "status", title: "Status" },
+                    {id: "startDate", title: "Start Date" },
+                    {id: "dueDate", title: "Due Date" }
+                ]}
+                rows={jobs}
+            />
+        </PageWrapper>
     );
 };
 

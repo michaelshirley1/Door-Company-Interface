@@ -1,6 +1,7 @@
 import React from 'react';
 import { HomePageProps, SummaryCard, ActiveJob, ActiveInvoice } from './model';
 import { useNavigate } from 'react-router-dom';
+import { Table } from '../../components/table';
 
 import './styles.scss';
 
@@ -23,7 +24,7 @@ const activeInvoices: ActiveInvoice[] = [
     { id: 'INV-003', customer: '', amount: '', status: 'Unpaid', dueDate: '' },
 ];
 
-const HomePage: React.FC<HomePageProps> = () => {
+export const HomePage: React.FC<HomePageProps> = () => {
     const navigate = useNavigate();
 
     return (
@@ -46,58 +47,36 @@ const HomePage: React.FC<HomePageProps> = () => {
             <div className="home-tables">
                 <div className="home-table-section">
                     <h2>Active Jobs</h2>
-                    <table className="home-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Customer</th>
-                                <th>Description</th>
-                                <th>Status</th>
-                                <th>Due Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {activeJobs.map((job) => (
-                                <tr key={job.id}>
-                                    <td>{job.id}</td>
-                                    <td>{job.customer}</td>
-                                    <td>{job.description}</td>
-                                    <td><span className={`status-badge ${job.status.toLowerCase().replace(' ', '-')}`}>{job.status}</span></td>
-                                    <td>{job.dueDate}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <Table
+                        className="active-jobs"
+                        headers={[
+                            {id: "id", title: "ID" },
+                            {id: "customer", title: "Customer" },
+                            {id: "description", title: "Description" },
+                            {id: "status", title: "Status" },
+                            {id: "startDate", title: "Start Date" },
+                            {id: "dueDate", title: "Due Date" }
+                        ]}
+                        rows={activeJobs}
+                    />
                 </div>
 
                 <div className="home-table-section">
                     <h2>Active Invoices</h2>
-                    <table className="home-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Customer</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Due Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {activeInvoices.map((inv) => (
-                                <tr key={inv.id}>
-                                    <td>{inv.id}</td>
-                                    <td>{inv.customer}</td>
-                                    <td>{inv.amount}</td>
-                                    <td><span className={`status-badge ${inv.status.toLowerCase()}`}>{inv.status}</span></td>
-                                    <td>{inv.dueDate}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <Table
+                        className="active-invoices"
+                        headers={[
+                            {id: "id", title: "ID" },
+                            {id: "customer", title: "Customer" },
+                            {id: "amount", title: "Amount" },
+                            {id: "status", title: "Status" },
+                            {id: "issueData", title: "Issue Date" },
+                            {id: "dueDate", title: "Due Date" }
+                        ]}
+                        rows={activeInvoices}
+                    />
                 </div>
             </div>
         </div>
     );
 };
-
-export default HomePage;

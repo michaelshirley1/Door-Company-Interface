@@ -1,5 +1,7 @@
 import React from 'react';
 import { QuotesPageProps, Quote } from './model';
+import { PageWrapper } from '../../components/page-wrapper';
+import { Table } from '../../components/table';
 
 import './styles.scss';
 
@@ -13,38 +15,23 @@ const quotes: Quote[] = [
 
 const QuotesPage: React.FC<QuotesPageProps> = () => {
     return (
-        <div className="quotes-page">
-            <div className="page-header">
-                <h1>Quotes</h1>
-                <button className="btn-primary">New Quote</button>
-            </div>
-            <div className="table-container">
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Customer</th>
-                            <th>Description</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {quotes.map((quote) => (
-                            <tr key={quote.id}>
-                                <td>{quote.id}</td>
-                                <td>{quote.customer}</td>
-                                <td>{quote.description}</td>
-                                <td>{quote.amount}</td>
-                                <td><span className={`status-badge ${quote.status.toLowerCase()}`}>{quote.status}</span></td>
-                                <td>{quote.date}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <PageWrapper
+            title="Quotes" 
+            buttonTitle='New Quote'
+            buttonAction={()=>{}}
+        >
+            <Table
+                headers={[
+                    {id: "id", title: "ID" },
+                    {id: "customer", title: "Customer" },
+                    {id: "description", title: "Description" },
+                    {id: "amount", title: "Amount" },
+                    {id: "status", title: "Status" },
+                    {id: "date", title: "Date" }
+                ]}
+                rows={quotes}
+            />
+        </PageWrapper>
     );
 };
 

@@ -1,5 +1,7 @@
 import React from 'react';
 import { PurchaseOrdersPageProps, PurchaseOrder } from './model';
+import { PageWrapper } from '../../components/page-wrapper';
+import { Table } from '../../components/table';
 
 import './styles.scss';
 
@@ -13,38 +15,23 @@ const purchaseOrders: PurchaseOrder[] = [
 
 const PurchaseOrdersPage: React.FC<PurchaseOrdersPageProps> = () => {
     return (
-        <div className="purchase-orders-page">
-            <div className="page-header">
-                <h1>Purchase Orders</h1>
-                <button className="btn-primary">New Purchase Order</button>
-            </div>
-            <div className="table-container">
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Supplier</th>
-                            <th>Description</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Order Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {purchaseOrders.map((po) => (
-                            <tr key={po.id}>
-                                <td>{po.id}</td>
-                                <td>{po.supplier}</td>
-                                <td>{po.description}</td>
-                                <td>{po.amount}</td>
-                                <td><span className={`status-badge ${po.status.toLowerCase()}`}>{po.status}</span></td>
-                                <td>{po.orderDate}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <PageWrapper
+            title="Purchase Orders" 
+            buttonTitle='New Purchase Order'
+            buttonAction={()=>{}}
+        >
+            <Table
+                headers={[
+                    {id: "id", title: "ID" },
+                    {id: "supplier", title: "Supplier" },
+                    {id: "description", title: "Description" },
+                    {id: "amount", title: "Amount" },
+                    {id: "status", title: "Status" },
+                    {id: "orderDate", title: "Order Date" }
+                ]}
+                rows={purchaseOrders}
+            />
+        </PageWrapper>
     );
 };
 
