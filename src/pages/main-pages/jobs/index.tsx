@@ -8,16 +8,10 @@ import { useAppContext } from '../../../context/AppContext';
 
 import './styles.scss';
 
-const statusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
-    if (s === 'Completed') return 'good';
-    if (s === 'Cancelled') return 'error';
-    if (s === 'OnHold') return 'warn';
-    return 'processing';
-};
-
 const JobPage: React.FC<JobPageProps> = () => {
     const navigate = useNavigate();
     const { jobs } = useAppContext();
+    
     return (
         <PageWrapper title="Jobs" buttonTitle="New Job" buttonAction={() => navigate('/jobs/new')}>
             <Table
@@ -27,7 +21,7 @@ const JobPage: React.FC<JobPageProps> = () => {
                     { id: 'siteAddress', title: 'Site Address' },
                     { id: 'assignedTo', title: 'Assigned To', render: (v) => v ?? '—' },
                     { id: 'scheduledDate', title: 'Scheduled Date', render: (v) => v ?? '—' },
-                    { id: 'status', title: 'Status', render: (v) => <Status content={v} type={statusType(v)} /> },
+                    { id: 'status', title: 'Status', render: (v) => <Status content={v} variation="job" /> },
                 ]}
                 rows={jobs}
                 onRowClick={(row) => navigate(`/jobs/${row.id}/edit`)}

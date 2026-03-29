@@ -1,6 +1,16 @@
+.body {
+    margin: 0;
+}
+
 .layout-wrapper {
     min-height: 100vh;
     background: #f4f5f7;
+    font-family: "Roboto", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+    margin: 0;
 
     .layout {
         display: flex;
@@ -14,8 +24,8 @@
         gap: 24px;
         padding: 0 24px;
         height: 56px;
-        background: #1a1a2e;
-        color: #fff;
+        background: #FFFFFF;
+        color: #1D2731;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 
         .layout-logo {
@@ -28,6 +38,11 @@
             padding: 8px 12px;
             letter-spacing: 0.5px;
             flex-shrink: 0;
+
+            .layout-logo-icon {
+                height: 70px;
+                width: 70px;
+            }
 
             &:hover {
                 opacity: 0.85;
@@ -42,7 +57,6 @@
             button {
                 background: none;
                 border: none;
-                color: rgba(255, 255, 255, 0.7);
                 font-size: 0.85rem;
                 font-weight: 500;
                 padding: 8px 14px;
@@ -53,33 +67,14 @@
 
                 &:hover {
                     background: rgba(255, 255, 255, 0.1);
-                    color: #fff;
-                }
-
-                &.active {
-                    background: rgba(255, 255, 255, 0.15);
-                    color: #fff;
-                }
-
-                &.catalogue {
-                    font-size: 0.78rem;
-                    color: rgba(255, 255, 255, 0.5);
-                    padding: 6px 12px;
-
-                    &:hover {
-                        color: rgba(255, 255, 255, 0.85);
-                    }
-
-                    &.active {
-                        color: #fff;
-                    }
+                    color: #888888;
                 }
             }
 
             .nav-divider {
                 width: 1px;
                 height: 20px;
-                background: rgba(255, 255, 255, 0.2);
+                background: rgba(0, 0, 0, 0.2);
                 margin: 0 6px;
                 flex-shrink: 0;
             }
@@ -87,7 +82,10 @@
     }
 
     .layout-content {
+        display: flex;
+        flex-direction: column;
         flex: 1;
         overflow-y: auto;
+        background-color: #FFFFFF
     }
 }

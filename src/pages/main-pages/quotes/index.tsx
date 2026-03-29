@@ -8,14 +8,6 @@ import { useAppContext } from '../../../context/AppContext';
 
 import './styles.scss';
 
-const statusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
-    if (s === 'Accepted') return 'good';
-    if (s === 'Declined') return 'error';
-    if (s === 'Expired') return 'warn';
-    if (s === 'Draft') return 'neutral';
-    return 'processing';
-};
-
 const QuotesPage: React.FC<QuotesPageProps> = () => {
     const navigate = useNavigate();
     const { quotes } = useAppContext();
@@ -28,7 +20,7 @@ const QuotesPage: React.FC<QuotesPageProps> = () => {
                     { id: 'createdBy', title: 'Created By', render: (v) => v ?? '—' },
                     { id: 'totalAmount', title: 'Total', render: (v) => v != null ? `$${v.toFixed(2)}` : '—' },
                     { id: 'validUntil', title: 'Valid Until', render: (v) => v ?? '—' },
-                    { id: 'status', title: 'Status', render: (v) => <Status content={v} type={statusType(v)} /> },
+                    { id: 'status', title: 'Status', render: (v) => <Status content={v} variation="quotes" /> },
                 ]}
                 rows={quotes}
                 onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}

@@ -7,47 +7,21 @@ import { useAppContext } from '../../context/AppContext';
 
 import './styles.scss';
 
-const jobStatusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
-    if (s === 'Completed') return 'good';
-    if (s === 'Cancelled') return 'error';
-    if (s === 'OnHold') return 'warn';
-    return 'processing';
-};
-
-const invoiceStatusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
-    if (s === 'Paid') return 'good';
-    if (s === 'Overdue' || s === 'Void') return 'error';
-    if (s === 'Draft') return 'neutral';
-    return 'processing';
-};
-
 export const HomePage: React.FC<HomePageProps> = () => {
     const navigate = useNavigate();
-    const { jobs, quotes, invoices, purchaseOrders } = useAppContext();
+    const { jobs, quotes, invoices } = useAppContext();
 
     const activeJobs = jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled');
     const activeInvoices = invoices.filter(i => i.status !== 'Paid' && i.status !== 'Void' && i.status !== 'Draft');
 
     const summaryCards = [
-        { label: 'Jobs', value: jobs.length, route: '/jobs' },
-        { label: 'Quotes', value: quotes.length, route: '/quotes' },
-        { label: 'Purchase Orders', value: purchaseOrders.length, route: '/purchase-orders' },
-        { label: 'Invoices', value: invoices.length, route: '/invoices' },
+        { label: 'Active Jobs', value: jobs.length, route: '/jobs' },
+        { label: 'Active Quotes', value: quotes.length, route: '/quotes' },
+        { label: 'Active Invoices', value: invoices.length, route: '/invoices' },
     ];
 
     return (
         <div className="home-page">
-            <h1>Dashboard</h1>
-
-            <div className="summary-cards">
-                {summaryCards.map((card) => (
-                    <div key={card.label} className="summary-card" onClick={() => navigate(card.route)}>
-                        <span className="summary-card-label">{card.label}</span>
-                        <span className="summary-card-value">{card.value}</span>
-                    </div>
-                ))}
-            </div>
-
             <div className="home-tables">
                 <div className="home-table-section">
                     <h2>Active Jobs</h2>
@@ -57,7 +31,7 @@ export const HomePage: React.FC<HomePageProps> = () => {
                             { id: 'customerName', title: 'Customer' },
                             { id: 'siteAddress', title: 'Site Address', render: (v) => v ?? '—' },
                             { id: 'scheduledDate', title: 'Scheduled', render: (v) => v ?? '—' },
-                            { id: 'status', title: 'Status', render: (v) => <Status content={v} type={jobStatusType(v)} /> },
+                            { id: 'status', title: 'Status', render: (v) => <Status content={v} variation='job' /> },
                         ]}
                         rows={activeJobs}
                         onRowClick={(row) => navigate(`/jobs/${row.id}/edit`)}
@@ -72,12 +46,21 @@ export const HomePage: React.FC<HomePageProps> = () => {
                             { id: 'jobNumber', title: 'Job' },
                             { id: 'total', title: 'Total', render: (v) => `$${v.toFixed(2)}` },
                             { id: 'dueDate', title: 'Due Date', render: (v) => v ?? '—' },
-                            { id: 'status', title: 'Status', render: (v) => <Status content={v} type={invoiceStatusType(v)} /> },
+                            { id: 'status', title: 'Status', render: (v) => <Status content={v} variation='invoice' /> },
                         ]}
                         rows={activeInvoices}
                         onRowClick={(row) => navigate(`/invoices/${row.id}/edit`)}
                     />
                 </div>
+            </div>
+
+            <div className="summary-cards">
+                {summaryCards.map((card) => (
+                    <div key={card.label} className="summary-card" onClick={() => navigate(card.route)}>
+                        <span className="summary-card-label">{card.label}</span>
+                        <span className="summary-card-value">{card.value}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );

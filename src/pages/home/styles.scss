@@ -1,17 +1,14 @@
 .home-page {
     padding: 24px;
-
-    h1 {
-        margin: 0 0 24px 0;
-        font-size: 1.5rem;
-        color: #1a1a2e;
-    }
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 
     .summary-cards {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        display: flex;
         gap: 16px;
-        margin-bottom: 32px;
+        margin-bottom: 16px;
+        width: 100%;
     }
 
     .summary-card {
@@ -26,6 +23,7 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         cursor: pointer;
         transition: box-shadow 0.2s, transform 0.2s;
+        flex-grow: 1;
 
         &:hover {
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -51,6 +49,19 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 24px;
+        align-items: start;
+
+        .home-table-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+
+            .table-container {
+                max-height: 500px;
+                overflow-y: auto;
+                height: auto;
+            }
+        }
     }
 
     .active-jobs, .active-invoices {
