@@ -1,18 +1,11 @@
 import React from 'react';
 import { InvoicesPageProps, Invoice } from './model';
-import { PageWrapper } from '../../components/page-wrapper';
-import { Table } from '../../components/table';
-import { headerItem } from '../../components/table/model';
+import { PageWrapper } from '../../../components/page-wrapper';
+import { Table } from '../../../components/table';
 
 import './styles.scss';
 
-const invoices: Invoice[] = [
-    { id: 'INV-001', customer: '', amount: '', status: 'Unpaid', issueDate: '', dueDate: '' },
-    { id: 'INV-002', customer: '', amount: '', status: 'Overdue', issueDate: '', dueDate: '' },
-    { id: 'INV-003', customer: '', amount: '', status: 'Paid', issueDate: '', dueDate: '' },
-    { id: 'INV-004', customer: '', amount: '', status: 'Unpaid', issueDate: '', dueDate: '' },
-    { id: 'INV-005', customer: '', amount: '', status: 'Paid', issueDate: '', dueDate: '' },
-];
+
 
 export const InvoicesPage: React.FC<InvoicesPageProps> = () => {
     return (
@@ -30,7 +23,7 @@ export const InvoicesPage: React.FC<InvoicesPageProps> = () => {
                     {id: "issueData", title: "Issue Date" },
                     {id: "dueDate", title: "Due Date" }
                 ]}
-                rows={invoices}
+                rows={[]}
             />
         </PageWrapper>
     );

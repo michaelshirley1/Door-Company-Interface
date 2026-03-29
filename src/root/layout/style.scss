@@ -27,6 +27,7 @@
             cursor: pointer;
             padding: 8px 12px;
             letter-spacing: 0.5px;
+            flex-shrink: 0;
 
             &:hover {
                 opacity: 0.85;
@@ -35,6 +36,7 @@
 
         .layout-tabs {
             display: flex;
+            align-items: center;
             gap: 4px;
 
             button {
@@ -43,10 +45,11 @@
                 color: rgba(255, 255, 255, 0.7);
                 font-size: 0.85rem;
                 font-weight: 500;
-                padding: 8px 16px;
+                padding: 8px 14px;
                 border-radius: 6px;
                 cursor: pointer;
                 transition: background 0.2s, color 0.2s;
+                white-space: nowrap;
 
                 &:hover {
                     background: rgba(255, 255, 255, 0.1);
@@ -57,13 +60,34 @@
                     background: rgba(255, 255, 255, 0.15);
                     color: #fff;
                 }
+
+                &.catalogue {
+                    font-size: 0.78rem;
+                    color: rgba(255, 255, 255, 0.5);
+                    padding: 6px 12px;
+
+                    &:hover {
+                        color: rgba(255, 255, 255, 0.85);
+                    }
+
+                    &.active {
+                        color: #fff;
+                    }
+                }
+            }
+
+            .nav-divider {
+                width: 1px;
+                height: 20px;
+                background: rgba(255, 255, 255, 0.2);
+                margin: 0 6px;
+                flex-shrink: 0;
             }
         }
     }
-    
+
     .layout-content {
         flex: 1;
         overflow-y: auto;
     }
 }
-

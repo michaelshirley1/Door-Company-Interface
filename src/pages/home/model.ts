@@ -7,17 +7,19 @@ export interface SummaryCard {
 }
 
 export interface ActiveJob {
-    id: string;
-    customer: string;
-    description: string;
+    id: number;
+    jobNumber: string | null;
+    customerName: string;
+    siteAddress: string | null;
     status: string;
-    dueDate: string;
+    scheduledDate: string | null;
 }
 
 export interface ActiveInvoice {
-    id: string;
-    customer: string;
-    amount: string;
+    id: number;
+    invoiceNumber: string;
+    jobNumber: string;
     status: string;
-    dueDate: string;
+    total: number;
+    dueDate: string | null;
 }

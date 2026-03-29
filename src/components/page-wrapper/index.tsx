@@ -9,7 +9,7 @@ export const PageWrapper: React.FC<PageWrapperProps> = (props) => {
         <div className="page-wrapper">
             <div className="page-header">
                 <h1>{title}</h1>
-                <button className="btn-primary" onClick={buttonAction}>{buttonTitle}</button>
+                {buttonTitle && <button className="btn-primary" onClick={buttonAction}>{buttonTitle}</button>}
             </div>
             {children}
         </div>

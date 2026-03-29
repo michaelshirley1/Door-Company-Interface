@@ -1,31 +1,39 @@
 import React from 'react';
-import { HomePageProps, SummaryCard, ActiveJob, ActiveInvoice } from './model';
 import { useNavigate } from 'react-router-dom';
+import { HomePageProps } from './model';
 import { Table } from '../../components/table';
+import { Status } from '../../components/status';
+import { useAppContext } from '../../context/AppContext';
 
 import './styles.scss';
 
-const summaryCards: SummaryCard[] = [
-    { label: 'Jobs', value: 0, route: '/job' },
-    { label: 'Invoices', value: 0, route: '/invoice' },
-    { label: 'Purchase Orders', value: 0, route: '/purchase-order' },
-    { label: 'Quotes', value: 0, route: '/quote' },
-];
+const jobStatusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
+    if (s === 'Completed') return 'good';
+    if (s === 'Cancelled') return 'error';
+    if (s === 'OnHold') return 'warn';
+    return 'processing';
+};
 
-const activeJobs: ActiveJob[] = [
-    { id: 'JOB-001', customer: '', description: '', status: 'In Progress', dueDate: '' },
-    { id: 'JOB-002', customer: '', description: '', status: 'In Progress', dueDate: '' },
-    { id: 'JOB-003', customer: '', description: '', status: 'Pending', dueDate: '' },
-];
-
-const activeInvoices: ActiveInvoice[] = [
-    { id: 'INV-001', customer: '', amount: '', status: 'Unpaid', dueDate: '' },
-    { id: 'INV-002', customer: '', amount: '', status: 'Overdue', dueDate: '' },
-    { id: 'INV-003', customer: '', amount: '', status: 'Unpaid', dueDate: '' },
-];
+const invoiceStatusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
+    if (s === 'Paid') return 'good';
+    if (s === 'Overdue' || s === 'Void') return 'error';
+    if (s === 'Draft') return 'neutral';
+    return 'processing';
+};
 
 export const HomePage: React.FC<HomePageProps> = () => {
     const navigate = useNavigate();
+    const { jobs, quotes, invoices, purchaseOrders } = useAppContext();
+
+    const activeJobs = jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled');
+    const activeInvoices = invoices.filter(i => i.status !== 'Paid' && i.status !== 'Void' && i.status !== 'Draft');
+
+    const summaryCards = [
+        { label: 'Jobs', value: jobs.length, route: '/jobs' },
+        { label: 'Quotes', value: quotes.length, route: '/quotes' },
+        { label: 'Purchase Orders', value: purchaseOrders.length, route: '/purchase-orders' },
+        { label: 'Invoices', value: invoices.length, route: '/invoices' },
+    ];
 
     return (
         <div className="home-page">
@@ -33,11 +41,7 @@ export const HomePage: React.FC<HomePageProps> = () => {
 
             <div className="summary-cards">
                 {summaryCards.map((card) => (
-                    <div
-                        key={card.label}
-                        className="summary-card"
-                        onClick={() => navigate(card.route)}
-                    >
+                    <div key={card.label} className="summary-card" onClick={() => navigate(card.route)}>
                         <span className="summary-card-label">{card.label}</span>
                         <span className="summary-card-value">{card.value}</span>
                     </div>
@@ -48,32 +52,30 @@ export const HomePage: React.FC<HomePageProps> = () => {
                 <div className="home-table-section">
                     <h2>Active Jobs</h2>
                     <Table
-                        className="active-jobs"
                         headers={[
-                            {id: "id", title: "ID" },
-                            {id: "customer", title: "Customer" },
-                            {id: "description", title: "Description" },
-                            {id: "status", title: "Status" },
-                            {id: "startDate", title: "Start Date" },
-                            {id: "dueDate", title: "Due Date" }
+                            { id: 'jobNumber', title: 'Job #' },
+                            { id: 'customerName', title: 'Customer' },
+                            { id: 'siteAddress', title: 'Site Address', render: (v) => v ?? '—' },
+                            { id: 'scheduledDate', title: 'Scheduled', render: (v) => v ?? '—' },
+                            { id: 'status', title: 'Status', render: (v) => <Status content={v} type={jobStatusType(v)} /> },
                         ]}
                         rows={activeJobs}
+                        onRowClick={(row) => navigate(`/jobs/${row.id}/edit`)}
                     />
                 </div>
 
                 <div className="home-table-section">
                     <h2>Active Invoices</h2>
                     <Table
-                        className="active-invoices"
                         headers={[
-                            {id: "id", title: "ID" },
-                            {id: "customer", title: "Customer" },
-                            {id: "amount", title: "Amount" },
-                            {id: "status", title: "Status" },
-                            {id: "issueData", title: "Issue Date" },
-                            {id: "dueDate", title: "Due Date" }
+                            { id: 'invoiceNumber', title: 'Invoice #' },
+                            { id: 'jobNumber', title: 'Job' },
+                            { id: 'total', title: 'Total', render: (v) => `$${v.toFixed(2)}` },
+                            { id: 'dueDate', title: 'Due Date', render: (v) => v ?? '—' },
+                            { id: 'status', title: 'Status', render: (v) => <Status content={v} type={invoiceStatusType(v)} /> },
                         ]}
                         rows={activeInvoices}
+                        onRowClick={(row) => navigate(`/invoices/${row.id}/edit`)}
                     />
                 </div>
             </div>
