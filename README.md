@@ -81,4 +81,4 @@ Full CRUD REST API for all resources:
 
 ## Status
 
-Early development — v0.1.0. Data is currently held in-memory (no database yet).
+Full Release — v1.0.0
