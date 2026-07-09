@@ -1,10 +1,12 @@
 using BusinessApi.Factories;
 using BusinessApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BusinessApi.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("hinge-type")]
 public class HingeTypeController : ControllerBase
 {

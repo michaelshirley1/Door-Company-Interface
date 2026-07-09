@@ -1,4 +1,6 @@
+using BusinessApi.Data;
 using BusinessApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
 {
@@ -13,65 +15,31 @@ namespace BusinessApi.Factories
 
     public class CustomerFactory : ICustomerFactory
     {
-        private static int _nextId = 4;
+        private readonly AppDbContext _db;
 
-        private static readonly List<Customer> _customers =
-        [
-            new Customer
-            {
-                Id = 1,
-                Name = "John Smith",
-                CompanyName = "Smith Building Co",
-                Email = "john@smithbuilding.com",
-                Phone = "021 123 4567",
-                Address = "15 Industry Rd, Auckland",
-                Notes = "Preferred customer — always pays on time.",
-                CreatedAt = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2025, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new Customer
-            {
-                Id = 2,
-                Name = "Sarah Johnson",
-                CompanyName = "Johnson Renovations",
-                Email = "sarah@johnsonreno.com",
-                Phone = "021 987 6543",
-                Address = "42 Commerce St, Wellington",
-                Notes = "Residential renovation specialist.",
-                CreatedAt = new DateTime(2025, 3, 5, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2025, 3, 5, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new Customer
-            {
-                Id = 3,
-                Name = "Mike Williams",
-                CompanyName = "Williams Construction",
-                Email = "mike@williamsconstruction.com",
-                Phone = "027 456 7890",
-                Address = "88 Builder Ave, Christchurch",
-                Notes = "Large commercial builds.",
-                CreatedAt = new DateTime(2025, 6, 20, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2025, 6, 20, 0, 0, 0, DateTimeKind.Utc),
-            },
-        ];
+        public CustomerFactory(AppDbContext db)
+        {
+            _db = db;
+        }
 
-        public IEnumerable<Customer> GetAll() => _customers;
+        public IEnumerable<Customer> GetAll() =>
+            _db.Customers.AsNoTracking().ToList();
 
         public Customer? GetById(int id) =>
-            _customers.FirstOrDefault(c => c.Id == id);
+            _db.Customers.AsNoTracking().FirstOrDefault(c => c.Id == id);
 
         public Customer Create(Customer customer)
         {
-            customer.Id = _nextId++;
             customer.CreatedAt = DateTime.UtcNow;
             customer.UpdatedAt = DateTime.UtcNow;
-            _customers.Add(customer);
+            _db.Customers.Add(customer);
+            _db.SaveChanges();
             return customer;
         }
 
         public Customer? Update(int id, Customer customer)
         {
-            var existing = _customers.FirstOrDefault(c => c.Id == id);
+            var existing = _db.Customers.FirstOrDefault(c => c.Id == id);
             if (existing is null) return null;
 
             existing.Name = customer.Name;
@@ -81,14 +49,16 @@ namespace BusinessApi.Factories
             existing.Address = customer.Address;
             existing.Notes = customer.Notes;
             existing.UpdatedAt = DateTime.UtcNow;
+            _db.SaveChanges();
             return existing;
         }
 
         public bool Delete(int id)
         {
-            var existing = _customers.FirstOrDefault(c => c.Id == id);
+            var existing = _db.Customers.FirstOrDefault(c => c.Id == id);
             if (existing is null) return false;
-            _customers.Remove(existing);
+            _db.Customers.Remove(existing);
+            _db.SaveChanges();
             return true;
         }
     }

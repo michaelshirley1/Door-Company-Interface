@@ -1,17 +1,10 @@
-import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { Job } from './model';
 
-export const getJobs = () =>
-    client.get<Job[]>('/job').then(r => r.data);
+const crud = makeCrudApi<Job>('job');
 
-export const getJob = (id: number) =>
-    client.get<Job>(`/job/${id}`).then(r => r.data);
-
-export const createJob = (data: Omit<Job, 'id'>) =>
-    client.post<Job>('/job', data).then(r => r.data);
-
-export const updateJob = (id: number, data: Job) =>
-    client.put<Job>(`/job/${id}`, data).then(r => r.data);
-
-export const deleteJob = (id: number) =>
-    client.delete(`/job/${id}`);
+export const getJobs   = crud.getAll;
+export const getJob    = crud.get;
+export const createJob = crud.create;
+export const updateJob = crud.update;
+export const deleteJob = crud.remove;

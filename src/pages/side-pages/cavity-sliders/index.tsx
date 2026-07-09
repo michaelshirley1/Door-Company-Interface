@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { CavitySliderType } from './model';
 import { PageWrapper } from '../../../components/page-wrapper';
 import { getCavitySliders, createCavitySlider, updateCavitySlider, deleteCavitySlider } from './api';
 import Modal from '../../../components/modal';
 import Button from '../../../components/button';
+import { TextField, SelectField } from '../../../components/form-field';
 import { Status } from '../../../components/status';
+import { Table } from '../../../components/table';
+import { HeaderItem } from '../../../components/table/model';
+import { FilterBar, FilterSelect } from '../../../components/filter-bar';
+import { useCatalogCrud } from '../../../hooks/useCatalogCrud';
+import { distinctValues } from '../../../shared/collections';
+
+import Loading from '../../../components/loading';
 
 import './styles.scss';
 
@@ -24,27 +32,42 @@ const blankForm = () => ({
     isActive:     'true',
 });
 
+const headers: HeaderItem<CavitySliderType>[] = [
+    { id: 'supplier',      title: 'Supplier' },
+    { id: 'productSystem', title: 'Product System' },
+    { id: 'unitType',      title: 'Unit Type' },
+    { id: 'studPocket',    title: 'Stud / Pocket' },
+    { id: 'finishDetail',  title: 'Finish' },
+    { id: 'widthRange',    title: 'Width Range' },
+    {
+        id: 'price',
+        title: 'Price',
+        render: (_, s) => s.isPOA
+            ? <span className="cs-poa">POA</span>
+            : s.price != null ? `$${s.price.toFixed(2)}` : '—',
+    },
+    {
+        id: 'isActive',
+        title: 'Active',
+        render: (_, s) => <Status content={s.isActive ? 'Active' : 'Inactive'} type={s.isActive ? 'good' : 'warn'} />,
+    },
+];
+
 const CavitySlidersPage: React.FC = () => {
-    const [sliders, setSliders] = useState<CavitySliderType[]>([]);
     const [supplier, setSupplier] = useState('');
     const [heightMm, setHeightMm] = useState('');
     const [widthRange, setWidthRange] = useState('');
 
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editing, setEditing] = useState<CavitySliderType | null>(null);
-    const [form, setForm] = useState(blankForm());
-
-    useEffect(() => { getCavitySliders().then(setSliders); }, []);
-
-    const openNew = () => {
-        setEditing(null);
-        setForm(blankForm());
-        setModalOpen(true);
-    };
-
-    const openEdit = (s: CavitySliderType) => {
-        setEditing(s);
-        setForm({
+    const {
+        items: sliders, loading, modalOpen, editing, form,
+        openNew, openEdit, closeModal, handleChange, handleSave, handleDelete,
+    } = useCatalogCrud<CavitySliderType, ReturnType<typeof blankForm>>({
+        fetchAll: getCavitySliders,
+        create:   createCavitySlider,
+        update:   updateCavitySlider,
+        remove:   deleteCavitySlider,
+        blankForm,
+        toForm: s => ({
             supplier:      s.supplier,
             productSystem: s.productSystem,
             unitType:      s.unitType      ?? '',
@@ -58,54 +81,28 @@ const CavitySlidersPage: React.FC = () => {
             category:      s.category      ?? '',
             subcategory:   s.subcategory   ?? '',
             isActive:      String(s.isActive),
-        });
-        setModalOpen(true);
-    };
+        }),
+        toPayload: f => ({
+            supplier:      f.supplier,
+            productSystem: f.productSystem,
+            unitType:      f.unitType      || null,
+            studPocket:    f.studPocket    || null,
+            finishDetail:  f.finishDetail  || null,
+            heightMm:      f.heightMm      ? parseInt(f.heightMm)    : null,
+            widthRange:    f.widthRange    || null,
+            price:         f.price         ? parseFloat(f.price)     : null,
+            isPOA:         f.isPOA === 'true',
+            priceBasis:    f.priceBasis    || 'per unit',
+            category:      f.category      || null,
+            subcategory:   f.subcategory   || null,
+            isActive:      f.isActive === 'true',
+        }),
+        getId: s => s.id,
+    });
 
-    const closeModal = () => { setModalOpen(false); setEditing(null); };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-
-    const handleSave = () => {
-        const data = {
-            supplier:      form.supplier,
-            productSystem: form.productSystem,
-            unitType:      form.unitType      || null,
-            studPocket:    form.studPocket    || null,
-            finishDetail:  form.finishDetail  || null,
-            heightMm:      form.heightMm      ? parseInt(form.heightMm)    : null,
-            widthRange:    form.widthRange    || null,
-            price:         form.price         ? parseFloat(form.price)     : null,
-            isPOA:         form.isPOA === 'true',
-            priceBasis:    form.priceBasis    || 'per unit',
-            category:      form.category      || null,
-            subcategory:   form.subcategory   || null,
-            isActive:      form.isActive === 'true',
-        };
-        const action = editing
-            ? updateCavitySlider(editing.id, { ...editing, ...data })
-            : createCavitySlider(data);
-        action.then(result => {
-            setSliders(prev => editing
-                ? prev.map(s => s.id === editing.id ? result : s)
-                : [...prev, result]
-            );
-            closeModal();
-        });
-    };
-
-    const handleDelete = () => {
-        if (!editing) return;
-        deleteCavitySlider(editing.id).then(() => {
-            setSliders(prev => prev.filter(s => s.id !== editing.id));
-            closeModal();
-        });
-    };
-
-    const availableSuppliers = [...new Set(sliders.map(s => s.supplier))].sort();
-    const availableHeights   = [...new Set(sliders.map(s => s.heightMm).filter(Boolean))].sort((a, b) => a! - b!) as number[];
-    const availableWidths    = [...new Set(sliders.map(s => s.widthRange).filter(Boolean))].sort() as string[];
+    const availableSuppliers = distinctValues(sliders, 'supplier');
+    const availableHeights   = distinctValues(sliders, 'heightMm');
+    const availableWidths    = distinctValues(sliders, 'widthRange');
 
     const results = sliders.filter(s => {
         if (supplier  && s.supplier !== supplier) return false;
@@ -114,76 +111,25 @@ const CavitySlidersPage: React.FC = () => {
         return true;
     });
 
+    if (loading) return <Loading />;
+
     return (
         <PageWrapper title="Cavity Sliders" buttonTitle="New Cavity Slider" buttonAction={openNew}>
-            <div className="cs-filters">
-                <div className="cs-filter-group">
-                    <label>Supplier</label>
-                    <select value={supplier} onChange={e => setSupplier(e.target.value)}>
-                        <option value="">All</option>
-                        {availableSuppliers.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                </div>
-                <div className="cs-filter-group">
-                    <label>Height</label>
-                    <select value={heightMm} onChange={e => setHeightMm(e.target.value)}>
-                        <option value="">All</option>
-                        {availableHeights.map(h => <option key={h} value={h}>{h} mm</option>)}
-                    </select>
-                </div>
-                <div className="cs-filter-group">
-                    <label>Width Range</label>
-                    <select value={widthRange} onChange={e => setWidthRange(e.target.value)}>
-                        <option value="">All</option>
-                        {availableWidths.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                </div>
-                {(supplier || heightMm || widthRange) && (
-                    <button className="cs-clear" onClick={() => { setSupplier(''); setHeightMm(''); setWidthRange(''); }}>
-                        Clear
-                    </button>
-                )}
-            </div>
+            <FilterBar
+                showClear={!!(supplier || heightMm || widthRange)}
+                onClear={() => { setSupplier(''); setHeightMm(''); setWidthRange(''); }}
+            >
+                <FilterSelect label="Supplier" value={supplier} onChange={setSupplier} options={availableSuppliers} />
+                <FilterSelect label="Height" value={heightMm} onChange={setHeightMm} options={availableHeights.map(h => ({ value: h, label: `${h} mm` }))} />
+                <FilterSelect label="Width Range" value={widthRange} onChange={setWidthRange} options={availableWidths} />
+            </FilterBar>
 
-            <table className="cs-table">
-                <thead>
-                    <tr>
-                        <th>Supplier</th>
-                        <th>Product System</th>
-                        <th>Unit Type</th>
-                        <th>Stud / Pocket</th>
-                        <th>Finish</th>
-                        <th>Width Range</th>
-                        <th>Price</th>
-                        <th>Active</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {results.length === 0 ? (
-                        <tr><td colSpan={8} className="cs-empty">No cavity sliders match the selected filters.</td></tr>
-                    ) : (
-                        results.map(s => (
-                            <tr key={s.id} className="cs-row" onClick={() => openEdit(s)}>
-                                <td>{s.supplier}</td>
-                                <td>{s.productSystem}</td>
-                                <td>{s.unitType ?? '—'}</td>
-                                <td>{s.studPocket ?? '—'}</td>
-                                <td>{s.finishDetail ?? '—'}</td>
-                                <td>{s.widthRange ?? '—'}</td>
-                                <td>
-                                    {s.isPOA
-                                        ? <span className="cs-poa">POA</span>
-                                        : s.price != null ? `$${s.price.toFixed(2)}` : '—'
-                                    }
-                                </td>
-                                <td>
-                                    <Status content={s.isActive ? 'Active' : 'Inactive'} type={s.isActive ? 'good' : 'warn'} />
-                                </td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+            <Table
+                headers={headers}
+                rows={results}
+                onRowClick={openEdit}
+                emptyMessage="No cavity sliders match the selected filters."
+            />
 
             <Modal
                 isOpen={modalOpen}
@@ -193,73 +139,37 @@ const CavitySlidersPage: React.FC = () => {
                 confirmLabel="Save"
             >
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Supplier</label>
-                        <input name="supplier" value={form.supplier} onChange={handleChange} placeholder="e.g. Hallmark" />
-                    </div>
-                    <div className="form-field">
-                        <label>Product System</label>
-                        <input name="productSystem" value={form.productSystem} onChange={handleChange} placeholder="e.g. Slimline 75" />
-                    </div>
+                    <TextField label="Supplier" name="supplier" value={form.supplier} onChange={handleChange} placeholder="e.g. Hallmark" />
+                    <TextField label="Product System" name="productSystem" value={form.productSystem} onChange={handleChange} placeholder="e.g. Slimline 75" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Unit Type</label>
-                        <input name="unitType" value={form.unitType} onChange={handleChange} placeholder="e.g. Single" />
-                    </div>
-                    <div className="form-field">
-                        <label>Stud / Pocket</label>
-                        <input name="studPocket" value={form.studPocket} onChange={handleChange} placeholder="e.g. 90mm stud" />
-                    </div>
+                    <TextField label="Unit Type" name="unitType" value={form.unitType} onChange={handleChange} placeholder="e.g. Single" />
+                    <TextField label="Stud / Pocket" name="studPocket" value={form.studPocket} onChange={handleChange} placeholder="e.g. 90mm stud" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Finish</label>
-                        <input name="finishDetail" value={form.finishDetail} onChange={handleChange} placeholder="e.g. Stainless" />
-                    </div>
-                    <div className="form-field">
-                        <label>Category</label>
-                        <input name="category" value={form.category} onChange={handleChange} placeholder="e.g. Residential" />
-                    </div>
+                    <TextField label="Finish" name="finishDetail" value={form.finishDetail} onChange={handleChange} placeholder="e.g. Stainless" />
+                    <TextField label="Category" name="category" value={form.category} onChange={handleChange} placeholder="e.g. Residential" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Height (mm)</label>
-                        <input type="number" name="heightMm" value={form.heightMm} onChange={handleChange} placeholder="e.g. 2040" />
-                    </div>
-                    <div className="form-field">
-                        <label>Width Range</label>
-                        <input name="widthRange" value={form.widthRange} onChange={handleChange} placeholder="e.g. 620–920" />
-                    </div>
+                    <TextField label="Height (mm)" type="number" name="heightMm" value={form.heightMm} onChange={handleChange} placeholder="e.g. 2040" />
+                    <TextField label="Width Range" name="widthRange" value={form.widthRange} onChange={handleChange} placeholder="e.g. 620–920" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Price</label>
-                        <input type="number" name="price" value={form.price} onChange={handleChange} placeholder="0.00" />
-                    </div>
-                    <div className="form-field">
-                        <label>POA</label>
-                        <select name="isPOA" value={form.isPOA} onChange={handleChange}>
-                            <option value="false">No</option>
-                            <option value="true">Yes (Price on Application)</option>
-                        </select>
-                    </div>
-                    <div className="form-field">
-                        <label>Price Basis</label>
-                        <input name="priceBasis" value={form.priceBasis} onChange={handleChange} placeholder="e.g. per unit" />
-                    </div>
+                    <TextField label="Price" type="number" name="price" value={form.price} onChange={handleChange} placeholder="0.00" />
+                    <SelectField label="POA" name="isPOA" value={form.isPOA} onChange={handleChange}>
+                        <option value="false">No</option>
+                        <option value="true">Yes (Price on Application)</option>
+                    </SelectField>
+                    <TextField label="Price Basis" name="priceBasis" value={form.priceBasis} onChange={handleChange} placeholder="e.g. per unit" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Active</label>
-                        <select name="isActive" value={form.isActive} onChange={handleChange}>
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                        </select>
-                    </div>
+                    <SelectField label="Active" name="isActive" value={form.isActive} onChange={handleChange}>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </SelectField>
                 </div>
                 {editing && (
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
+                    <div className="delete-divider">
                         <Button variant="danger" onClick={handleDelete}>Delete Cavity Slider</Button>
                     </div>
                 )}

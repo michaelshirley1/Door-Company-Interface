@@ -2,8 +2,6 @@
 
 A full-stack management platform for door companies. Manage jobs, quotes, customers, invoices, purchase orders, and product catalogues from a single internal dashboard.
 
-**Note: this version does not have any server access and all data is held in memory. A full version is avaliable on request**
-
 <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items:flex-start;">
   <img src="https://github.com/user-attachments/assets/564edfb3-a3cb-4ccb-a4f5-ebd027ba0586" 
        width="48%" 
@@ -80,3 +78,7 @@ Full CRUD REST API for all resources:
 | Handle Types | `/handletype` |
 | Hinge Types | `/hingetype` |
 | Cavity Sliders | `/cavity-slider` |
+
+## Status
+
+Early development — v0.1.0. Data is currently held in-memory (no database yet).

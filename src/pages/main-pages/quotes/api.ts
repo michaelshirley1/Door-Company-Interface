@@ -1,17 +1,10 @@
-import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { Quote } from './model';
 
-export const getQuotes = () =>
-    client.get<Quote[]>('/quote').then(r => r.data);
+const crud = makeCrudApi<Quote>('quote');
 
-export const getQuote = (id: number) =>
-    client.get<Quote>(`/quote/${id}`).then(r => r.data);
-
-export const createQuote = (data: Omit<Quote, 'id'>) =>
-    client.post<Quote>('/quote', data).then(r => r.data);
-
-export const updateQuote = (id: number, data: Quote) =>
-    client.put<Quote>(`/quote/${id}`, data).then(r => r.data);
-
-export const deleteQuote = (id: number) =>
-    client.delete(`/quote/${id}`);
+export const getQuotes   = crud.getAll;
+export const getQuote    = crud.get;
+export const createQuote = crud.create;
+export const updateQuote = crud.update;
+export const deleteQuote = crud.remove;

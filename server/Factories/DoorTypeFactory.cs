@@ -1,107 +1,102 @@
+using BusinessApi.Data;
 using BusinessApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
 {
     public interface IDoorTypeFactory
     {
-        IEnumerable<DoorType> GetAll(string? leafType = null, string? material = null, int? heightMm = null, bool? isPOA = null);
+        IEnumerable<DoorType> GetAll(string? leafType = null, string? material = null);
         DoorType? GetById(int id);
         DoorType Create(DoorType doorType);
         DoorType? Update(int id, DoorType doorType);
         bool Delete(int id);
+        IEnumerable<DoorPricingEntry> GetPrices(int doorTypeId);
+        DoorPricingEntry? AddPrice(int doorTypeId, DoorPricingEntry entry);
+        bool DeletePrice(int doorTypeId, int entryId);
     }
 
     public class DoorTypeFactory : IDoorTypeFactory
     {
-        private static int _nextId = 4;
+        private readonly AppDbContext _db;
 
-        private static readonly List<DoorType> _doorTypes =
-        [
-            new DoorType
-            {
-                Id = 1,
-                Name = "Solid Core Timber",
-                LeafType = "Single",
-                Material = "Timber",
-                Description = "Standard solid core timber door, suitable for interior and exterior use.",
-                IsActive = true,
-                Price = 500.00f,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new DoorType
-            {
-                Id = 2,
-                Name = "Hollow Core",
-                LeafType = "Single",
-                Material = "Composite",
-                Description = "Lightweight hollow core door for interior use.",
-                IsActive = true,
-                Price = 69.00f,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new DoorType
-            {
-                Id = 3,
-                Name = "Fire Door",
-                LeafType = "Single",
-                Material = "Steel",
-                Description = "FRR 60/60/60 rated fire door for commercial buildings.",
-                IsActive = true,
-                IsPOA = true,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-        ];
-
-        public IEnumerable<DoorType> GetAll(string? leafType = null, string? material = null, int? heightMm = null, bool? isPOA = null)
+        public DoorTypeFactory(AppDbContext db)
         {
-            var query = _doorTypes.AsEnumerable();
+            _db = db;
+        }
+
+        public IEnumerable<DoorType> GetAll(string? leafType = null, string? material = null)
+        {
+            IQueryable<DoorType> query = _db.DoorTypes.Include(d => d.Prices).AsNoTracking();
             if (leafType is not null)
-                query = query.Where(d => d.LeafType != null && d.LeafType.Equals(leafType, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(d => d.LeafType != null && d.LeafType.ToLower() == leafType.ToLower());
             if (material is not null)
-                query = query.Where(d => d.Material != null && d.Material.Equals(material, StringComparison.OrdinalIgnoreCase));
-            if (heightMm is not null)
-                query = query.Where(d => d.HeightMm == heightMm);
-            if (isPOA is not null)
-                query = query.Where(d => d.IsPOA == isPOA);
-            return query;
+                query = query.Where(d => d.Material != null && d.Material.ToLower() == material.ToLower());
+            return query.ToList();
         }
 
         public DoorType? GetById(int id) =>
-            _doorTypes.FirstOrDefault(d => d.Id == id);
+            _db.DoorTypes.Include(d => d.Prices).AsNoTracking().FirstOrDefault(d => d.Id == id);
 
         public DoorType Create(DoorType doorType)
         {
-            doorType.Id = _nextId++;
             doorType.CreatedAt = DateTime.UtcNow;
-            _doorTypes.Add(doorType);
+            _db.DoorTypes.Add(doorType);
+            _db.SaveChanges();
             return doorType;
         }
 
         public DoorType? Update(int id, DoorType doorType)
         {
-            var existing = _doorTypes.FirstOrDefault(d => d.Id == id);
+            var existing = _db.DoorTypes.FirstOrDefault(d => d.Id == id);
             if (existing is null) return null;
 
             existing.Name = doorType.Name;
             existing.LeafType = doorType.LeafType;
             existing.Material = doorType.Material;
             existing.ProductRange = doorType.ProductRange;
-            existing.HeightMm = doorType.HeightMm;
-            existing.WidthSize = doorType.WidthSize;
             existing.SkinThickness = doorType.SkinThickness;
             existing.Description = doorType.Description;
-            existing.IsPOA = doorType.IsPOA;
             existing.Notes = doorType.Notes;
             existing.IsActive = doorType.IsActive;
-            existing.Price = doorType.IsPOA ? null : doorType.Price;
+            _db.SaveChanges();
             return existing;
         }
 
         public bool Delete(int id)
         {
-            var existing = _doorTypes.FirstOrDefault(d => d.Id == id);
+            var existing = _db.DoorTypes.FirstOrDefault(d => d.Id == id);
             if (existing is null) return false;
-            _doorTypes.Remove(existing);
+            _db.DoorTypes.Remove(existing);
+            _db.SaveChanges();
+            return true;
+        }
+
+        public IEnumerable<DoorPricingEntry> GetPrices(int doorTypeId) =>
+            _db.DoorPricingEntries.AsNoTracking()
+               .Where(p => p.DoorTypeId == doorTypeId)
+               .OrderBy(p => p.Configuration)
+               .ThenBy(p => p.HeightMm)
+               .ThenBy(p => p.WidthMm)
+               .ThenBy(p => p.ThicknessMm)
+               .ToList();
+
+        public DoorPricingEntry? AddPrice(int doorTypeId, DoorPricingEntry entry)
+        {
+            if (!_db.DoorTypes.Any(d => d.Id == doorTypeId)) return null;
+            entry.DoorTypeId = doorTypeId;
+            entry.DoorType = null!;
+            _db.DoorPricingEntries.Add(entry);
+            _db.SaveChanges();
+            return entry;
+        }
+
+        public bool DeletePrice(int doorTypeId, int entryId)
+        {
+            var entry = _db.DoorPricingEntries.FirstOrDefault(p => p.Id == entryId && p.DoorTypeId == doorTypeId);
+            if (entry is null) return false;
+            _db.DoorPricingEntries.Remove(entry);
+            _db.SaveChanges();
             return true;
         }
     }

@@ -1,32 +1,40 @@
 .status-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
 
     &.processing {
         background: #e3f2fd;
         color: #1565c0;
+        border: 1px solid #bbdefb;
     }
 
     &.warn {
         background: #fff3e0;
         color: #e65100;
+        border: 1px solid #ffe0b2;
     }
 
     &.error {
         background: #fce4ec;
         color: #c62828;
+        border: 1px solid #ffcdd2;
     }
 
     &.good {
         background: #e8f5e9;
         color: #2e7d32;
+        border: 1px solid #c8e6c9;
     }
 
     &.neutral {
-        background: #f0f0f0;
-        color: #616161;
+        background: #f4f5f7;
+        color: #6b7280;
+        border: 1px solid #e4e7ec;
     }
 }

@@ -1,4 +1,6 @@
+using BusinessApi.Data;
 using BusinessApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
 {
@@ -13,93 +15,41 @@ namespace BusinessApi.Factories
 
     public class CavitySliderTypeFactory : ICavitySliderTypeFactory
     {
-        private static int _nextId = 4;
+        private readonly AppDbContext _db;
 
-        private static readonly List<CavitySliderType> _cavitySliderTypes =
-        [
-            new CavitySliderType
-            {
-                Id = 1,
-                Supplier = "Hallmark",
-                ProductSystem = "Assembled Unit",
-                UnitType = "Single 90mm stud Architrave",
-                StudPocket = "90mm",
-                FinishDetail = "Architrave",
-                HeightMm = 2040,
-                WidthRange = "610-910",
-                Price = 320.00f,
-                IsPOA = false,
-                PriceBasis = "per unit",
-                Category = "Cavity Slider",
-                Subcategory = "Assembled",
-                IsActive = true,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new CavitySliderType
-            {
-                Id = 2,
-                Supplier = "CS For Doors",
-                ProductSystem = "SpaceMaker",
-                UnitType = "Single 140mm stud D/G",
-                StudPocket = "140mm",
-                FinishDetail = "Double Grooved",
-                HeightMm = 2040,
-                WidthRange = "610-910",
-                Price = 410.00f,
-                IsPOA = false,
-                PriceBasis = "per unit",
-                Category = "Cavity Slider",
-                Subcategory = "SpaceMaker",
-                IsActive = true,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new CavitySliderType
-            {
-                Id = 3,
-                Supplier = "CS For Doors",
-                ProductSystem = "MidWay",
-                UnitType = "Cavity Slider",
-                StudPocket = "90mm stud / 10mm or 13mm linings",
-                FinishDetail = "Grooved",
-                HeightMm = 2400,
-                WidthRange = "Up to 910",
-                IsPOA = true,
-                PriceBasis = "kit",
-                Category = "Cavity Slider",
-                Subcategory = "MidWay",
-                IsActive = true,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-        ];
+        public CavitySliderTypeFactory(AppDbContext db)
+        {
+            _db = db;
+        }
 
         public IEnumerable<CavitySliderType> GetAll(string? supplier = null, int? heightMm = null, string? category = null, bool? isPOA = null)
         {
-            var query = _cavitySliderTypes.AsEnumerable();
+            IQueryable<CavitySliderType> query = _db.CavitySliderTypes.AsNoTracking();
             if (supplier is not null)
-                query = query.Where(c => c.Supplier.Equals(supplier, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(c => c.Supplier.ToLower() == supplier.ToLower());
             if (heightMm is not null)
                 query = query.Where(c => c.HeightMm == heightMm);
             if (category is not null)
-                query = query.Where(c => c.Category != null && c.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(c => c.Category != null && c.Category.ToLower() == category.ToLower());
             if (isPOA is not null)
                 query = query.Where(c => c.IsPOA == isPOA);
-            return query;
+            return query.ToList();
         }
 
         public CavitySliderType? GetById(int id) =>
-            _cavitySliderTypes.FirstOrDefault(c => c.Id == id);
+            _db.CavitySliderTypes.AsNoTracking().FirstOrDefault(c => c.Id == id);
 
         public CavitySliderType Create(CavitySliderType cavitySliderType)
         {
-            cavitySliderType.Id = _nextId++;
             cavitySliderType.CreatedAt = DateTime.UtcNow;
-            _cavitySliderTypes.Add(cavitySliderType);
+            _db.CavitySliderTypes.Add(cavitySliderType);
+            _db.SaveChanges();
             return cavitySliderType;
         }
 
         public CavitySliderType? Update(int id, CavitySliderType cavitySliderType)
         {
-            var existing = _cavitySliderTypes.FirstOrDefault(c => c.Id == id);
+            var existing = _db.CavitySliderTypes.FirstOrDefault(c => c.Id == id);
             if (existing is null) return null;
 
             existing.Supplier = cavitySliderType.Supplier;
@@ -115,14 +65,16 @@ namespace BusinessApi.Factories
             existing.Category = cavitySliderType.Category;
             existing.Subcategory = cavitySliderType.Subcategory;
             existing.IsActive = cavitySliderType.IsActive;
+            _db.SaveChanges();
             return existing;
         }
 
         public bool Delete(int id)
         {
-            var existing = _cavitySliderTypes.FirstOrDefault(c => c.Id == id);
+            var existing = _db.CavitySliderTypes.FirstOrDefault(c => c.Id == id);
             if (existing is null) return false;
-            _cavitySliderTypes.Remove(existing);
+            _db.CavitySliderTypes.Remove(existing);
+            _db.SaveChanges();
             return true;
         }
     }

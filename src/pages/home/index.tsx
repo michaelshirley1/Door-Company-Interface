@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { HomePageProps } from './model';
 import { Table } from '../../components/table';
 import { Status } from '../../components/status';
+import Loading from '../../components/loading';
 import { Job } from '../main-pages/jobs/model';
 import { Invoice } from '../main-pages/invoices/model';
 import { getJobs } from '../main-pages/jobs/api';
 import { getInvoices } from '../main-pages/invoices/api';
 import { getQuotes } from '../main-pages/quotes/api';
+import { formatCurrency } from '../../shared/format';
 
 import './styles.scss';
 
@@ -16,11 +18,14 @@ export const HomePage: React.FC<HomePageProps> = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [quoteCount, setQuoteCount] = useState(0);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getJobs().then(setJobs);
-        getInvoices().then(setInvoices);
-        getQuotes().then(q => setQuoteCount(q.length));
+        Promise.all([
+            getJobs().then(setJobs),
+            getInvoices().then(setInvoices),
+            getQuotes().then(q => setQuoteCount(q.length)),
+        ]).finally(() => setLoading(false));
     }, []);
 
     const activeJobs = jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled');
@@ -31,6 +36,8 @@ export const HomePage: React.FC<HomePageProps> = () => {
         { label: 'Active Quotes', value: quoteCount, route: '/quotes' },
         { label: 'Active Invoices', value: invoices.length, route: '/invoices' },
     ];
+
+    if (loading) return <Loading />;
 
     return (
         <div className="home-page">
@@ -64,7 +71,7 @@ export const HomePage: React.FC<HomePageProps> = () => {
                         headers={[
                             { id: 'invoiceNumber', title: 'Invoice #' },
                             { id: 'jobNumber', title: 'Job' },
-                            { id: 'total', title: 'Total', render: (v) => `$${v.toFixed(2)}` },
+                            { id: 'total', title: 'Total', render: (v) => formatCurrency(v) },
                             { id: 'dueDate', title: 'Due Date', render: (v) => v ?? '—' },
                             { id: 'status', title: 'Status', render: (v) => <Status content={v} variation='invoice' /> },
                         ]}

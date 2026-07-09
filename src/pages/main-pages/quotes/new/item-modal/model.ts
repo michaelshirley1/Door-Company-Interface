@@ -2,6 +2,7 @@ import { OrderItem } from '../../../jobs/model';
 import { DoorType } from '../../../../side-pages/door-types/model';
 import { HingeType } from '../../../../side-pages/hinge-types/model';
 import { HandleType } from '../../../../side-pages/handle-types/model';
+import { JambType } from '../../../../side-pages/jamb-types/model';
 
 export interface QuoteItemModalProps {
     isOpen: boolean;
@@ -9,6 +10,9 @@ export interface QuoteItemModalProps {
     doorTypes: DoorType[];
     hingeTypes: HingeType[];
     handleTypes: HandleType[];
-    onAdd: (item: OrderItem) => void;
+    jambTypes: JambType[];
+    editIndex?: number | null;
+    initialItem?: OrderItem | null;
+    onAdd: (item: OrderItem, editIndex: number | null) => void;
     onClose: () => void;
 }

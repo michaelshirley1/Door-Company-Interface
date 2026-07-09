@@ -1,4 +1,6 @@
+using BusinessApi.Data;
 using BusinessApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
 {
@@ -13,87 +15,38 @@ namespace BusinessApi.Factories
 
     public class InvoiceFactory : IInvoiceFactory
     {
-        private static int _nextId = 4;
+        private readonly AppDbContext _db;
 
-        private static readonly List<Invoice> _invoices =
-        [
-            new Invoice
-            {
-                Id = 1,
-                JobId = 1,
-                JobNumber = "JOB-001",
-                InvoiceNumber = "INV-001",
-                Status = "Sent",
-                Subtotal = 4782.61m,
-                TaxRate = 0.15m,
-                TaxAmount = 717.39m,
-                Total = 5500.00m,
-                AmountPaid = 0,
-                DueDate = new DateOnly(2026, 5, 28),
-                IssuedAt = new DateTime(2026, 4, 28, 0, 0, 0, DateTimeKind.Utc),
-                Notes = "Payment due within 30 days.",
-                CreatedAt = new DateTime(2026, 4, 28, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 4, 28, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new Invoice
-            {
-                Id = 2,
-                JobId = 2,
-                JobNumber = "JOB-002",
-                InvoiceNumber = "INV-002",
-                Status = "Draft",
-                Subtotal = 1913.04m,
-                TaxRate = 0.15m,
-                TaxAmount = 286.96m,
-                Total = 2200.00m,
-                AmountPaid = 0,
-                DueDate = new DateOnly(2026, 6, 10),
-                Notes = null,
-                CreatedAt = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new Invoice
-            {
-                Id = 3,
-                JobId = 3,
-                JobNumber = "JOB-003",
-                InvoiceNumber = "INV-003",
-                Status = "Paid",
-                Subtotal = 7652.17m,
-                TaxRate = 0.15m,
-                TaxAmount = 1147.83m,
-                Total = 8800.00m,
-                AmountPaid = 8800.00m,
-                DueDate = new DateOnly(2026, 4, 22),
-                IssuedAt = new DateTime(2026, 4, 16, 0, 0, 0, DateTimeKind.Utc),
-                PaidAt = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
-                Notes = "Paid in full.",
-                CreatedAt = new DateTime(2026, 4, 16, 0, 0, 0, DateTimeKind.Utc),
-                UpdatedAt = new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
-            },
-        ];
+        public InvoiceFactory(AppDbContext db)
+        {
+            _db = db;
+        }
 
-        public IEnumerable<Invoice> GetAll() => _invoices;
+        public IEnumerable<Invoice> GetAll() =>
+            _db.Invoices.AsNoTracking().ToList();
 
         public Invoice? GetById(int id) =>
-            _invoices.FirstOrDefault(i => i.Id == id);
+            _db.Invoices.AsNoTracking().FirstOrDefault(i => i.Id == id);
 
         public Invoice Create(Invoice invoice)
         {
-            invoice.Id = _nextId++;
             invoice.CreatedAt = DateTime.UtcNow;
             invoice.UpdatedAt = DateTime.UtcNow;
-            _invoices.Add(invoice);
+            _db.Invoices.Add(invoice);
+            _db.SaveChanges();
             return invoice;
         }
 
         public Invoice? Update(int id, Invoice invoice)
         {
-            var existing = _invoices.FirstOrDefault(i => i.Id == id);
+            var existing = _db.Invoices.FirstOrDefault(i => i.Id == id);
             if (existing is null) return null;
 
             existing.JobId = invoice.JobId;
             existing.JobNumber = invoice.JobNumber;
+            existing.QuoteId = invoice.QuoteId;
+            existing.QuoteNumber = invoice.QuoteNumber;
+            existing.CustomerName = invoice.CustomerName;
             existing.InvoiceNumber = invoice.InvoiceNumber;
             existing.Status = invoice.Status;
             existing.Subtotal = invoice.Subtotal;
@@ -106,14 +59,16 @@ namespace BusinessApi.Factories
             existing.PaidAt = invoice.PaidAt;
             existing.Notes = invoice.Notes;
             existing.UpdatedAt = DateTime.UtcNow;
+            _db.SaveChanges();
             return existing;
         }
 
         public bool Delete(int id)
         {
-            var existing = _invoices.FirstOrDefault(i => i.Id == id);
+            var existing = _db.Invoices.FirstOrDefault(i => i.Id == id);
             if (existing is null) return false;
-            _invoices.Remove(existing);
+            _db.Invoices.Remove(existing);
+            _db.SaveChanges();
             return true;
         }
     }

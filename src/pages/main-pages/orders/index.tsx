@@ -1,35 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { OrdersPageProps } from './model';
-import { Quote } from '../quotes/model';
+import { OrdersPageProps, PurchaseOrder } from './model';
 import { PageWrapper } from '../../../components/page-wrapper';
 import { Table } from '../../../components/table';
 import { Status } from '../../../components/status';
-import { getQuotes } from '../quotes/api';
-
-const ORDER_STATUSES = ['Order', 'Dispatched', 'Delivered'];
+import Loading from '../../../components/loading';
+import ErrorBanner from '../../../components/error-banner';
+import { useFetch } from '../../../hooks/useFetch';
+import { getOrders } from './api';
+import { formatCurrency } from '../../../shared/format';
 
 const OrdersPage: React.FC<OrdersPageProps> = () => {
     const navigate = useNavigate();
-    const [orders, setOrders] = useState<Quote[]>([]);
+    const { data: orders, loading, error } = useFetch(getOrders, [] as PurchaseOrder[], 'Failed to load orders.');
 
-    useEffect(() => {
-        getQuotes().then(all => setOrders(all.filter(q => ORDER_STATUSES.includes(q.status))));
-    }, []);
+    if (loading) return <Loading />;
+    if (error) return <ErrorBanner message={error} />;
 
     return (
         <PageWrapper title="Orders" buttonTitle="" buttonAction={() => {}}>
             <Table
                 headers={[
-                    { id: 'quoteNumber',  title: 'Order #' },
-                    { id: 'customerName', title: 'Customer' },
-                    { id: 'createdBy',    title: 'Created By',    render: (v) => v ?? '—' },
-                    { id: 'totalAmount',  title: 'Total (excl. GST)', render: (v) => v != null ? `$${Number(v).toFixed(2)}` : '—' },
-                    { id: 'deliveryDate', title: 'Delivery Date', render: (v) => v ?? '—' },
-                    { id: 'status',       title: 'Status',        render: (v) => <Status content={v} variation="quotes" /> },
+                    { id: 'poNumber',          title: 'PO #' },
+                    { id: 'customerName',       title: 'Customer' },
+                    { id: 'jobNumber',          title: 'Job #' },
+                    { id: 'totalAmount',        title: 'Total (excl. GST)', render: (v) => formatCurrency(v) },
+                    { id: 'expectedDelivery',   title: 'Expected Delivery' },
+                    { id: 'status',             title: 'Status',            render: (v) => <Status content={v} variation="order" /> },
                 ]}
                 rows={orders}
-                onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}
+                onRowClick={(row) => navigate(`/orders/${row.id}/edit`)}
             />
         </PageWrapper>
     );

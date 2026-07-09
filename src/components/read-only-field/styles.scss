@@ -1,0 +1,15 @@
+.form-field.read-only-field {
+    input.read-only-input {
+        background: #f0f0f0;
+        color: #666;
+
+        &.clickable {
+            cursor: pointer;
+        }
+
+        &.strong {
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+    }
+}

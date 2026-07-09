@@ -5,6 +5,8 @@ export interface TableProps<T = Record<string, unknown>> {
     rows: T[]
     onRowClick?: (row: T, index: number) => void
     onAddClick?: () => void
+    /** Shown as a full-width row when `rows` is empty. */
+    emptyMessage?: string
 }
 
 export interface HeaderItem<T = Record<string, unknown>> {

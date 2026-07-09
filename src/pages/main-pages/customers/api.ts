@@ -1,17 +1,10 @@
-import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { Customer } from './model';
 
-export const getCustomers = () =>
-    client.get<Customer[]>('/customer').then(r => r.data);
+const crud = makeCrudApi<Customer>('customer');
 
-export const getCustomer = (id: number) =>
-    client.get<Customer>(`/customer/${id}`).then(r => r.data);
-
-export const createCustomer = (data: Omit<Customer, 'id'>) =>
-    client.post<Customer>('/customer', data).then(r => r.data);
-
-export const updateCustomer = (id: number, data: Customer) =>
-    client.put<Customer>(`/customer/${id}`, data).then(r => r.data);
-
-export const deleteCustomer = (id: number) =>
-    client.delete(`/customer/${id}`);
+export const getCustomers   = crud.getAll;
+export const getCustomer    = crud.get;
+export const createCustomer = crud.create;
+export const updateCustomer = crud.update;
+export const deleteCustomer = crud.remove;

@@ -1,5 +1,14 @@
 .page-wrapper {
-    padding: 24px;
+    padding: 28px 32px;
+
+    @media (max-width: 768px) {
+        padding: 16px;
+
+        .page-header {
+            h1 { font-size: 1.2rem; }
+        }
+    }
+
     .page-header {
         display: flex;
         justify-content: space-between;
@@ -8,24 +17,33 @@
 
         h1 {
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.45rem;
+            font-weight: 700;
             color: #1a1a2e;
+            letter-spacing: -0.3px;
         }
     }
 
     .btn-primary {
-        padding: 10px 20px;
+        padding: 9px 20px;
         background: #1a1a2e;
         color: #fff;
         border: none;
         border-radius: 8px;
-        font-size: 0.85rem;
+        font-size: 0.84rem;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+        letter-spacing: 0.1px;
+        font-family: inherit;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.18);
 
         &:hover {
             background: #2d2d4e;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+            transform: translateY(-1px);
         }
+
+        &:active { transform: none; }
     }
 }

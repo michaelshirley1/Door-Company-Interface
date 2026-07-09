@@ -19,12 +19,13 @@ export interface OrderItem {
   id: number;
   jobId?: number;
   quoteId?: number | null;
-  itemType: 'Door' | 'Handle' | 'Hinge' | 'Hardware' | 'Freight';
+  itemType: 'Prehung' | 'Hardware' | 'DoorLeaf' | 'Misc';
   doorTypeId?: number | null;
   hingeTypeId?: number | null;
   handleTypeId?: number | null;
   room?: string | null;
   assembly?: string | null;
+  doorConfiguration?: string | null;
   heightMm?: number | null;
   widthMm?: number | null;
   thicknessMm?: number | null;
@@ -37,6 +38,7 @@ export interface OrderItem {
   fireRating?: string | null;
   trackSystem?: string | null;
   trackType?: string | null;
+  reveal?: string | null;
   quantity: number | null;
   unitPrice?: number | null;
   notes?: string | null;

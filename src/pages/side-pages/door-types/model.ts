@@ -3,8 +3,11 @@ export interface DoorTypesPageProps {}
 export interface DoorPricingEntry {
     id: number;
     doorTypeId: number;
+    configuration?: string | null;
+    priceFor?: 'Prehung' | 'Leaf' | null;
     heightMm: number;
     widthMm: number;
+    thicknessMm: number;
     price: number;
 }
 
@@ -14,12 +17,8 @@ export interface DoorType {
     leafType?: string | null;
     material: string | null;
     productRange?: string | null;
-    heightMm?: number | null;
-    widthSize?: string | null;
     skinThickness?: string | null;
     description: string | null;
-    isPOA?: boolean;
-    price: number;
     notes?: string | null;
     isActive: boolean;
     prices?: DoorPricingEntry[];

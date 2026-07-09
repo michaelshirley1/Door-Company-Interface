@@ -1,25 +1,19 @@
 import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { DoorType, DoorPricingEntry } from './model';
 
-export const getDoorTypes = () =>
-    client.get<DoorType[]>('/door-type').then(r => r.data);
+const crud = makeCrudApi<DoorType>('door-type');
 
-export const getDoorType = (id: number) =>
-    client.get<DoorType>(`/door-type/${id}`).then(r => r.data);
-
-export const createDoorType = (data: Omit<DoorType, 'id'>) =>
-    client.post<DoorType>('/door-type', data).then(r => r.data);
-
-export const updateDoorType = (id: number, data: DoorType) =>
-    client.put<DoorType>(`/door-type/${id}`, data).then(r => r.data);
-
-export const deleteDoorType = (id: number) =>
-    client.delete(`/door-type/${id}`);
+export const getDoorTypes   = crud.getAll;
+export const getDoorType    = crud.get;
+export const createDoorType = crud.create;
+export const updateDoorType = crud.update;
+export const deleteDoorType = crud.remove;
 
 export const getDoorTypePrices = (doorTypeId: number) =>
     client.get<DoorPricingEntry[]>(`/door-type/${doorTypeId}/prices`).then(r => r.data);
 
-export const createDoorTypePrice = (doorTypeId: number, data: { heightMm: number; widthMm: number; price: number }) =>
+export const createDoorTypePrice = (doorTypeId: number, data: { configuration?: string | null; priceFor?: 'Prehung' | 'Leaf' | null; heightMm: number; widthMm: number; thicknessMm: number; price: number }) =>
     client.post<DoorPricingEntry>(`/door-type/${doorTypeId}/prices`, { ...data, doorTypeId }).then(r => r.data);
 
 export const deleteDoorTypePrice = (doorTypeId: number, entryId: number) =>

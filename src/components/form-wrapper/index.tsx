@@ -4,7 +4,7 @@ import { FormWrapperProps } from './model';
 import './styles.scss';
 import Button from '../button';
 
-export const FormWrapper: React.FC<FormWrapperProps> = ({ title, onSubmit, onCancel, onDelete, extraActions, error, children }) => {
+export const FormWrapper: React.FC<FormWrapperProps> = ({ title, onSubmit, onCancel, onDelete, extraActions, error, submitting, children }) => {
     const [confirmingDelete, setConfirmingDelete] = useState(false);
 
     return (
@@ -34,8 +34,8 @@ export const FormWrapper: React.FC<FormWrapperProps> = ({ title, onSubmit, onCan
                     <div className="form-actions-extra">{extraActions}</div>
                 )}
                 <div className="form-actions-right">
-                    <Button variant='secondary' type="button" onClick={onCancel}>Cancel</Button>
-                    <Button variant='primary' type="button" onClick={onSubmit}>Save</Button>
+                    <Button variant='secondary' type="button" onClick={onCancel} disabled={submitting}>Cancel</Button>
+                    <Button variant='primary' type="button" onClick={onSubmit} loading={submitting}>{submitting ? 'Saving...' : 'Save'}</Button>
                 </div>
             </div>
         </div>

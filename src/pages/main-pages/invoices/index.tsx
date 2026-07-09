@@ -1,36 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { InvoicesPageProps } from './model';
-import { Quote } from '../quotes/model';
+import { InvoicesPageProps, Invoice } from './model';
 import { PageWrapper } from '../../../components/page-wrapper';
 import { Table } from '../../../components/table';
 import { Status } from '../../../components/status';
-import { getQuotes } from '../quotes/api';
+import Loading from '../../../components/loading';
+import ErrorBanner from '../../../components/error-banner';
+import { useFetch } from '../../../hooks/useFetch';
+import { getInvoices } from './api';
+import { formatCurrency } from '../../../shared/format';
 
 import './styles.scss';
 
-const INVOICE_STATUSES = ['Invoice', 'Paid'];
-
 const InvoicesPage: React.FC<InvoicesPageProps> = () => {
     const navigate = useNavigate();
-    const [invoices, setInvoices] = useState<Quote[]>([]);
+    const { data: invoices, loading, error } = useFetch(getInvoices, [] as Invoice[], 'Failed to load invoices.');
 
-    useEffect(() => {
-        getQuotes().then(all => setInvoices(all.filter(q => INVOICE_STATUSES.includes(q.status))));
-    }, []);
+    if (loading) return <Loading />;
+    if (error) return <ErrorBanner message={error} />;
 
     return (
-        <PageWrapper title="Invoices" buttonTitle="" buttonAction={() => {}}>
+        <PageWrapper title="Invoices" buttonTitle="New Invoice" buttonAction={() => navigate('/invoices/new')}>
             <Table
                 headers={[
-                    { id: 'quoteNumber',  title: 'Invoice #' },
-                    { id: 'customerName', title: 'Customer' },
-                    { id: 'total',        title: 'Total (incl. GST)', render: (v) => v != null ? `$${Number(v).toFixed(2)}` : '—' },
-                    { id: 'dueDate',      title: 'Pay By',            render: (v) => v ?? '—' },
-                    { id: 'status',       title: 'Status',            render: (v) => <Status content={v} variation="invoice" /> },
+                    { id: 'invoiceNumber', title: 'Invoice #' },
+                    { id: 'customerName',  title: 'Customer' },
+                    { id: 'total',         title: 'Total (incl. GST)', render: (v) => formatCurrency(v) },
+                    { id: 'dueDate',       title: 'Pay By' },
+                    { id: 'status',        title: 'Status',             render: (v) => <Status content={v} variation="invoice" /> },
                 ]}
                 rows={invoices}
-                onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}
+                onRowClick={(row) => navigate(`/invoices/${row.id}/edit`)}
             />
         </PageWrapper>
     );

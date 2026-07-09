@@ -1,17 +1,10 @@
-import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { Invoice } from './model';
 
-export const getInvoices = () =>
-    client.get<Invoice[]>('/invoice').then(r => r.data);
+const crud = makeCrudApi<Invoice>('invoice');
 
-export const getInvoice = (id: number) =>
-    client.get<Invoice>(`/invoice/${id}`).then(r => r.data);
-
-export const createInvoice = (data: Omit<Invoice, 'id'>) =>
-    client.post<Invoice>('/invoice', data).then(r => r.data);
-
-export const updateInvoice = (id: number, data: Invoice) =>
-    client.put<Invoice>(`/invoice/${id}`, data).then(r => r.data);
-
-export const deleteInvoice = (id: number) =>
-    client.delete(`/invoice/${id}`);
+export const getInvoices   = crud.getAll;
+export const getInvoice    = crud.get;
+export const createInvoice = crud.create;
+export const updateInvoice = crud.update;
+export const deleteInvoice = crud.remove;

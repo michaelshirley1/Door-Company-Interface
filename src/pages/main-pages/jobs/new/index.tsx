@@ -1,37 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FormWrapper } from '../../../../components/form-wrapper';
+import { FormField, TextField, SelectField, TextAreaField } from '../../../../components/form-field';
 import { Table } from '../../../../components/table';
 import Loading from '../../../../components/loading';
-import { Job, OrderItem } from '../model';
+import { Job } from '../model';
 import { getJob, createJob, updateJob, deleteJob, getJobs } from '../api';
 import { Customer } from '../../customers/model';
 import { getCustomers } from '../../customers/api';
-import { DoorType } from '../../../side-pages/door-types/model';
-import { HingeType } from '../../../side-pages/hinge-types/model';
-import { HandleType } from '../../../side-pages/handle-types/model';
-import { getDoorTypes } from '../../../side-pages/door-types/api';
-import { getHingeTypes } from '../../../side-pages/hinge-types/api';
-import { getHandleTypes } from '../../../side-pages/handle-types/api';
 import { Quote } from '../../quotes/model';
-import { createQuote, getQuotes, updateQuote } from '../../quotes/api';
+import { createQuote, getQuotes } from '../../quotes/api';
+import { PurchaseOrder } from '../../orders/model';
+import { getOrders } from '../../orders/api';
+import { Invoice } from '../../invoices/model';
+import { getInvoices } from '../../invoices/api';
 import { Status } from '../../../../components/status';
 import Button from '../../../../components/button';
-import JobItemModal from './job-modal';
+import ReadOnlyField from '../../../../components/read-only-field';
+import { formatCurrency, todayISO } from '../../../../shared/format';
+import { getApiErrorMessage } from '../../../../api/errors';
+import '../../../../components/loading/styles.scss';
 
 const JobFormPage: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [existing, setExisting] = useState<Job | undefined>();
     const [jobQuotes, setJobQuotes] = useState<Quote[]>([]);
+    const [jobOrders, setJobOrders] = useState<PurchaseOrder[]>([]);
+    const [jobInvoices, setJobInvoices] = useState<Invoice[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
-    const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
-    const [hingeTypes, setHingeTypes] = useState<HingeType[]>([]);
-    const [handleTypes, setHandleTypes] = useState<HandleType[]>([]);
-    const [addModal, setAddModal] = useState(false);
     const [addNote, setAddNote] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [addingQuote, setAddingQuote] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const [form, setForm] = useState({
         jobNumber:     '',
@@ -43,7 +46,6 @@ const JobFormPage: React.FC = () => {
         scheduledDate: '',
         completedDate: '',
         notes:         '',
-        items:         [] as OrderItem[],
     });
 
     useEffect(() => {
@@ -51,14 +53,13 @@ const JobFormPage: React.FC = () => {
 
         const lookups = [
             getCustomers().then(setCustomers),
-            getDoorTypes().then(setDoorTypes),
-            getHingeTypes().then(setHingeTypes),
-            getHandleTypes().then(setHandleTypes),
         ];
 
         const specific = numId
             ? [
                 getQuotes().then(all => setJobQuotes(all.filter(q => q.jobId === numId))),
+                getOrders().then(all => setJobOrders(all.filter(o => o.jobId === numId))),
+                getInvoices().then(all => setJobInvoices(all.filter(i => i.jobId === numId))),
                 getJob(numId).then(job => {
                     setExisting(job);
                     setForm({
@@ -71,8 +72,8 @@ const JobFormPage: React.FC = () => {
                         scheduledDate: job.scheduledDate ?? '',
                         completedDate: job.completedDate ?? '',
                         notes:         job.notes         ?? '',
-                        items:         job.items         ?? [],
                     });
+                    if (job.notes) setAddNote(true);
                 }),
               ]
             : [
@@ -90,16 +91,34 @@ const JobFormPage: React.FC = () => {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setForm(prev => {
+            const next = { ...prev, [name]: value };
+            if (name === 'status' && value === 'Completed' && !prev.completedDate) {
+                next.completedDate = todayISO();
+            }
+            return next;
+        });
+        if (fieldErrors[name]) setFieldErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+    };
 
     const handleCustomerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const c = customers.find(c => c.id === parseInt(e.target.value));
         setForm(prev => ({ ...prev, customerId: e.target.value, customerName: c ? (c.companyName ?? c.name) : '' }));
+        if (fieldErrors.customerId) setFieldErrors(prev => { const n = { ...prev }; delete n.customerId; return n; });
     };
 
     const handleSubmit = () => {
+        const newErrors: Record<string, string> = {};
+        if (!form.customerId) newErrors.customerId = 'Customer is required';
+        if (Object.keys(newErrors).length > 0) {
+            setFieldErrors(newErrors);
+            return;
+        }
+        setFieldErrors({});
         setError(null);
+        setSaving(true);
         const data = {
             jobNumber:       form.jobNumber || null,
             customerId:      parseInt(form.customerId) || 0,
@@ -111,14 +130,15 @@ const JobFormPage: React.FC = () => {
             completedDate:   form.completedDate   || null,
             purchaseOrderId: existing?.purchaseOrderId ?? null,
             notes:           form.notes            || null,
-            items:           form.items,
+            items:           [],
         };
         const action = existing
             ? updateJob(existing.id, { ...existing, ...data })
             : createJob(data);
         action
             .then(() => navigate('/jobs'))
-            .catch(() => setError('Failed to save job. Please try again.'));
+            .catch((err) => setError(`Failed to save job: ${getApiErrorMessage(err)}`))
+            .finally(() => setSaving(false));
     };
 
     const handleDelete = () => {
@@ -129,210 +149,158 @@ const JobFormPage: React.FC = () => {
             .catch(() => setError('Failed to delete job. Please try again.'));
     };
 
-    const ACTIVE_QUOTE_STATUSES = ['Draft', 'Sent', 'Accepted'];
-
-    const handleGenerateQuote = async () => {
-        if (!existing) return;
+    const handleAddQuote = async () => {
         setError(null);
-        try {
-            const activeQuote = jobQuotes.find(q => ACTIVE_QUOTE_STATUSES.includes(q.status));
-            if (activeQuote) {
-                const nullified = await updateQuote(activeQuote.id, { ...activeQuote, status: 'Nullified' });
-                setJobQuotes(prev => prev.map(q => q.id === nullified.id ? nullified : q));
+        setAddingQuote(true);
+
+        let job = existing;
+
+        if (!job) {
+            if (!form.customerId) {
+                setFieldErrors({ customerId: 'Customer is required' });
+                setAddingQuote(false);
+                return;
             }
-            const quoteData = {
-                quoteNumber:  `QTE-${existing.jobNumber ?? existing.id}`,
-                customerId:   existing.customerId,
-                customerName: existing.customerName,
-                status:       'Draft' as const,
+            try {
+                job = await createJob({
+                    jobNumber:       form.jobNumber || null,
+                    customerId:      parseInt(form.customerId) || 0,
+                    customerName:    form.customerName,
+                    status:          form.status,
+                    siteAddress:     form.siteAddress   || null,
+                    assignedTo:      form.assignedTo    || null,
+                    scheduledDate:   form.scheduledDate || null,
+                    completedDate:   form.completedDate || null,
+                    purchaseOrderId: null,
+                    notes:           form.notes         || null,
+                    items:           [],
+                });
+                setExisting(job);
+            } catch (err) {
+                setError(`Failed to save job: ${getApiErrorMessage(err)}`);
+                setAddingQuote(false);
+                return;
+            }
+        }
+
+        try {
+            const quoteCount = jobQuotes.length + 1;
+            const quote = await createQuote({
+                quoteNumber:  `QTE-${job.jobNumber ?? job.id}-${quoteCount}`,
+                customerId:   job.customerId,
+                customerName: job.customerName,
+                status:       'Draft',
                 totalAmount:  null,
-                deliveryDate: form.scheduledDate || null,
                 validUntil:   null,
                 createdBy:    null,
-                notes:        form.siteAddress ? `Site: ${form.siteAddress}` : (form.notes || null),
-                jobId:        existing.id,
-                jobNumber:    existing.jobNumber || null,
-                items:        form.items,
-            };
-            const quote = await createQuote(quoteData);
+                notes:        null,
+                siteAddress:  form.siteAddress || null,
+                jobId:        job.id,
+                jobNumber:    job.jobNumber || null,
+                items:        [],
+            });
             navigate(`/quotes/${quote.id}/edit`);
-        } catch {
-            setError('Failed to generate quote. Please try again.');
+        } catch (err) {
+            setError(`Failed to create quote: ${getApiErrorMessage(err)}`);
+            setAddingQuote(false);
         }
     };
-
-    const handleAddItem = (item: OrderItem) => {
-        setForm(prev => ({ ...prev, items: [...prev.items, item] }));
-        setAddModal(false);
-    };
-
-    const handleRemoveItem = (index: number) =>
-        setForm(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
-
-    const workflowActions = existing ? (
-        <Button variant="secondary" onClick={handleGenerateQuote}>Generate Quote</Button>
-    ) : undefined;
 
     if (loading) return <Loading />;
 
     return (
         <>
-            <FormWrapper
-                title={existing ? `Job ${existing.jobNumber ?? existing.id}` : 'New Job'}
-                onSubmit={handleSubmit}
-                onCancel={() => navigate('/jobs')}
-                onDelete={existing ? handleDelete : undefined}
-                extraActions={workflowActions}
-                error={error}
-            >
-                <div className="form-row">
-                    <div className="form-field">
-                        <label>Job Number</label>
-                        <input name="jobNumber" value={form.jobNumber} readOnly style={{ background: '#f0f0f0', color: '#666' }} />
-                    </div>
-                    <div className="form-field">
-                        <label>Status</label>
-                        <select name="status" value={form.status} onChange={handleChange}>
-                            <option value="Scheduled">Scheduled</option>
-                            <option value="InProgress">In Progress</option>
-                            <option value="OnHold">On Hold</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                    <div className="form-field">
-                        <label>Customer</label>
-                        <select name="customerId" value={form.customerId} onChange={handleCustomerChange}>
-                            <option value="">Select customer...</option>
-                            {customers.map(c => (
-                                <option key={c.id} value={c.id}>{c.companyName ?? c.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-                <div className="form-field">
-                    <label>Site Address</label>
-                    <input name="siteAddress" value={form.siteAddress} onChange={handleChange} placeholder="123 Main St" />
-                </div>
-                <div className="form-row">
-                    <div className="form-field">
-                        <label>Assigned To</label>
-                        <input name="assignedTo" value={form.assignedTo} onChange={handleChange} placeholder="Staff member" />
-                    </div>
-                    <div className="form-field">
-                        <label>Scheduled Date</label>
-                        <input type="date" name="scheduledDate" value={form.scheduledDate} onChange={handleChange} />
-                    </div>
-                    <div className="form-field">
-                        <label>Completed Date</label>
-                        <input type="date" name="completedDate" value={form.completedDate} onChange={handleChange} />
-                    </div>
-                </div>
+        {addingQuote && (
+            <div className="loading-overlay">
+                <div className="loading-spinner" />
+            </div>
+        )}
+        <FormWrapper
+            title={existing ? `Job ${existing.jobNumber ?? existing.id}` : 'New Job'}
+            onSubmit={handleSubmit}
+            onCancel={() => navigate('/jobs')}
+            onDelete={existing ? handleDelete : undefined}
+            error={error}
+            submitting={saving}
+        >
+            <div className="form-row">
+                <ReadOnlyField label="Job Number" value={form.jobNumber} />
+                <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="InProgress">In Progress</option>
+                    <option value="OnHold">On Hold</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </SelectField>
+                <SelectField label="Customer" error={fieldErrors.customerId} name="customerId" value={form.customerId} onChange={handleCustomerChange}>
+                    <option value="">Select customer...</option>
+                    {customers.map(c => (
+                        <option key={c.id} value={c.id}>{c.companyName ?? c.name}</option>
+                    ))}
+                </SelectField>
+            </div>
+            <TextField label="Site Address" name="siteAddress" value={form.siteAddress} onChange={handleChange} placeholder="123 Main St" />
+            <div className="form-row">
+                <TextField label="Assigned To" name="assignedTo" value={form.assignedTo} onChange={handleChange} placeholder="Staff member" />
+                <TextField label="Scheduled Date" type="date" name="scheduledDate" value={form.scheduledDate} onChange={handleChange} />
+            </div>
 
-                {addNote ? (
-                    <>
-                        <div className="form-field">
-                            <label>Notes</label>
-                            <textarea name="notes" value={form.notes} onChange={handleChange} />
-                        </div>
-                        <Button variant="secondary" onClick={() => { setAddNote(false); setForm(prev => ({ ...prev, notes: '' })); }}>
-                            Remove Note
-                        </Button>
-                    </>
-                ) : (
-                    <Button variant="secondary" onClick={() => setAddNote(true)}>Add Note</Button>
-                )}
+            {addNote ? (
+                <>
+                    <TextAreaField label="Notes" name="notes" value={form.notes} onChange={handleChange} />
+                    <Button variant="secondary" onClick={() => { setAddNote(false); setForm(prev => ({ ...prev, notes: '' })); }}>
+                        Remove Note
+                    </Button>
+                </>
+            ) : (
+                <Button variant="secondary" onClick={() => setAddNote(true)}>Add Note</Button>
+            )}
 
-                <div className="form-field">
-                    <label>Items</label>
-                    <Table<OrderItem>
+            <FormField label="Quotes">
+                <Table<Quote>
+                    headers={[
+                        { id: 'quoteNumber', title: 'Quote #' },
+                        { id: 'createdBy',   title: 'Created By' },
+                        { id: 'totalAmount', title: 'Total (excl. GST)', render: (v) => formatCurrency(v) },
+                        { id: 'validUntil',  title: 'Valid Until' },
+                        { id: 'status',      title: 'Status',             render: (v) => <Status content={v} variation="quotes" /> },
+                    ]}
+                    rows={jobQuotes}
+                    onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}
+                    onAddClick={addingQuote ? undefined : handleAddQuote}
+                />
+            </FormField>
+
+            {jobOrders.length > 0 && (
+                <FormField label="Orders">
+                    <Table<PurchaseOrder>
                         headers={[
-                            { id: 'itemType',     title: 'Type' },
-                            { id: 'room',         title: 'Room',     render: (v) => v ?? '—' },
-                            { id: 'assembly',     title: 'Assembly', render: (v) => v ?? '—' },
-                            { id: 'heightMm',     title: 'H (mm)',   render: (v) => v ?? '—' },
-                            { id: 'widthMm',      title: 'W (mm)',   render: (v) => v ?? '—' },
-                            { id: 'colourFinish', title: 'Finish',   render: (v) => v ?? '—' },
-                            { id: 'quantity',     title: 'Qty',      render: (v) => v ?? '—' },
-                            {
-                                id: '_remove',
-                                title: '',
-                                render: (_v, _row, index) => (
-                                    <Button variant="danger" onClick={() => handleRemoveItem(index!)}>Remove</Button>
-                                ),
-                            },
+                            { id: 'poNumber',         title: 'PO #' },
+                            { id: 'totalAmount',      title: 'Total (excl. GST)', render: (v) => formatCurrency(v) },
+                            { id: 'expectedDelivery', title: 'Expected Delivery' },
+                            { id: 'status',           title: 'Status',            render: (v) => <Status content={v} variation="order" /> },
                         ]}
-                        rows={form.items}
-                        onAddClick={() => setAddModal(true)}
+                        rows={jobOrders}
+                        onRowClick={(row) => navigate(`/orders/${row.id}/edit`)}
                     />
-                </div>
+                </FormField>
+            )}
 
-                {existing && (() => {
-                    const quoteStage   = jobQuotes.filter(q => ['Draft','Sent','Accepted','Declined','Expired','Nullified'].includes(q.status));
-                    const orderStage   = jobQuotes.filter(q => ['Order','Dispatched','Delivered'].includes(q.status));
-                    const invoiceStage = jobQuotes.filter(q => ['Invoice','Paid'].includes(q.status));
-                    return (
-                        <>
-                            {quoteStage.length > 0 && (
-                                <div className="form-field">
-                                    <label>Quotes</label>
-                                    <Table<Quote>
-                                        headers={[
-                                            { id: 'quoteNumber', title: 'Quote #' },
-                                            { id: 'createdBy',   title: 'Created By',   render: (v) => v ?? '—' },
-                                            { id: 'totalAmount', title: 'Total (excl. GST)', render: (v) => v != null ? `$${Number(v).toFixed(2)}` : '—' },
-                                            { id: 'validUntil',  title: 'Valid Until',  render: (v) => v ?? '—' },
-                                            { id: 'status',      title: 'Status',       render: (v) => <Status content={v} variation="quotes" /> },
-                                        ]}
-                                        rows={quoteStage}
-                                        onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}
-                                    />
-                                </div>
-                            )}
-                            {orderStage.length > 0 && (
-                                <div className="form-field">
-                                    <label>Orders</label>
-                                    <Table<Quote>
-                                        headers={[
-                                            { id: 'quoteNumber',  title: 'Order #' },
-                                            { id: 'totalAmount',  title: 'Total (excl. GST)', render: (v) => v != null ? `$${Number(v).toFixed(2)}` : '—' },
-                                            { id: 'deliveryDate', title: 'Delivery Date', render: (v) => v ?? '—' },
-                                            { id: 'status',       title: 'Status',        render: (v) => <Status content={v} variation="quotes" /> },
-                                        ]}
-                                        rows={orderStage}
-                                        onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}
-                                    />
-                                </div>
-                            )}
-                            {invoiceStage.length > 0 && (
-                                <div className="form-field">
-                                    <label>Invoices</label>
-                                    <Table<Quote>
-                                        headers={[
-                                            { id: 'quoteNumber', title: 'Invoice #' },
-                                            { id: 'total',       title: 'Total (incl. GST)', render: (v) => v != null ? `$${Number(v).toFixed(2)}` : '—' },
-                                            { id: 'dueDate',     title: 'Pay By',    render: (v) => v ?? '—' },
-                                            { id: 'status',      title: 'Status',    render: (v) => <Status content={v} variation="invoice" /> },
-                                        ]}
-                                        rows={invoiceStage}
-                                        onRowClick={(row) => navigate(`/quotes/${row.id}/edit`)}
-                                    />
-                                </div>
-                            )}
-                        </>
-                    );
-                })()}
-            </FormWrapper>
-
-            <JobItemModal
-                isOpen={addModal}
-                sortOrder={form.items.length}
-                doorTypes={doorTypes}
-                hingeTypes={hingeTypes}
-                handleTypes={handleTypes}
-                onAdd={handleAddItem}
-                onClose={() => setAddModal(false)}
-            />
+            {jobInvoices.length > 0 && (
+                <FormField label="Invoices">
+                    <Table<Invoice>
+                        headers={[
+                            { id: 'invoiceNumber', title: 'Invoice #' },
+                            { id: 'total',         title: 'Total (incl. GST)', render: (v) => formatCurrency(v) },
+                            { id: 'dueDate',       title: 'Pay By' },
+                            { id: 'status',        title: 'Status',            render: (v) => <Status content={v} variation="invoice" /> },
+                        ]}
+                        rows={jobInvoices}
+                        onRowClick={(row) => navigate(`/invoices/${row.id}/edit`)}
+                    />
+                </FormField>
+            )}
+        </FormWrapper>
         </>
     );
 };

@@ -22,7 +22,6 @@
 
         public Customer Customer { get; set; } = null!;
         public PurchaseOrder? PurchaseOrder { get; set; }
-        public Invoice? Invoice { get; set; }
         public ICollection<OrderItem> Items { get; set; } = [];
     }
 }

@@ -1,4 +1,6 @@
+using BusinessApi.Data;
 using BusinessApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
 {
@@ -13,69 +15,37 @@ namespace BusinessApi.Factories
 
     public class HandleTypeFactory : IHandleTypeFactory
     {
-        private static int _nextId = 4;
+        private readonly AppDbContext _db;
 
-        private static readonly List<HandleType> _handleTypes =
-        [
-            new HandleType
-            {
-                Id = 1,
-                Name = "Lever Handle",
-                Finish = "Brushed Nickel",
-                Mechanism = "Latch",
-                Description = "Standard lever handle with latch mechanism.",
-                IsActive = true,
-                Price = 56.23f,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new HandleType
-            {
-                Id = 2,
-                Name = "Pull Handle",
-                Finish = "Stainless Steel",
-                Mechanism = "Pull",
-                Description = "Straight pull handle for commercial doors.",
-                IsActive = true,
-                Price = 56.23f,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-            new HandleType
-            {
-                Id = 3,
-                Name = "Door Knob",
-                Finish = "Chrome",
-                Mechanism = "Knob",
-                Description = "Classic round door knob with privacy lock.",
-                IsActive = true,
-                Price = 56.23f,
-                CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            },
-        ];
+        public HandleTypeFactory(AppDbContext db)
+        {
+            _db = db;
+        }
 
         public IEnumerable<HandleType> GetAll(string? finish = null, string? mechanism = null)
         {
-            var query = _handleTypes.AsEnumerable();
+            IQueryable<HandleType> query = _db.HandleTypes.AsNoTracking();
             if (finish is not null)
-                query = query.Where(h => h.Finish != null && h.Finish.Equals(finish, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(h => h.Finish != null && h.Finish.ToLower() == finish.ToLower());
             if (mechanism is not null)
-                query = query.Where(h => h.Mechanism != null && h.Mechanism.Equals(mechanism, StringComparison.OrdinalIgnoreCase));
-            return query;
+                query = query.Where(h => h.Mechanism != null && h.Mechanism.ToLower() == mechanism.ToLower());
+            return query.ToList();
         }
 
         public HandleType? GetById(int id) =>
-            _handleTypes.FirstOrDefault(h => h.Id == id);
+            _db.HandleTypes.AsNoTracking().FirstOrDefault(h => h.Id == id);
 
         public HandleType Create(HandleType handleType)
         {
-            handleType.Id = _nextId++;
             handleType.CreatedAt = DateTime.UtcNow;
-            _handleTypes.Add(handleType);
+            _db.HandleTypes.Add(handleType);
+            _db.SaveChanges();
             return handleType;
         }
 
         public HandleType? Update(int id, HandleType handleType)
         {
-            var existing = _handleTypes.FirstOrDefault(h => h.Id == id);
+            var existing = _db.HandleTypes.FirstOrDefault(h => h.Id == id);
             if (existing is null) return null;
 
             existing.Name = handleType.Name;
@@ -84,14 +54,16 @@ namespace BusinessApi.Factories
             existing.Description = handleType.Description;
             existing.IsActive = handleType.IsActive;
             existing.Price = handleType.Price;
+            _db.SaveChanges();
             return existing;
         }
 
         public bool Delete(int id)
         {
-            var existing = _handleTypes.FirstOrDefault(h => h.Id == id);
+            var existing = _db.HandleTypes.FirstOrDefault(h => h.Id == id);
             if (existing is null) return false;
-            _handleTypes.Remove(existing);
+            _db.HandleTypes.Remove(existing);
+            _db.SaveChanges();
             return true;
         }
     }

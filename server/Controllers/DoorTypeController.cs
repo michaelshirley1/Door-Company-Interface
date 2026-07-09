@@ -1,10 +1,12 @@
 using BusinessApi.Factories;
 using BusinessApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BusinessApi.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("door-type")]
 public class DoorTypeController : ControllerBase
 {
@@ -19,11 +21,9 @@ public class DoorTypeController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<DoorType>), StatusCodes.Status200OK)]
     public IActionResult GetAll(
         [FromQuery] string? leafType = null,
-        [FromQuery] string? material = null,
-        [FromQuery] int? heightMm = null,
-        [FromQuery] bool? isPOA = null)
+        [FromQuery] string? material = null)
     {
-        return Ok(_doorTypeFactory.GetAll(leafType, material, heightMm, isPOA));
+        return Ok(_doorTypeFactory.GetAll(leafType, material));
     }
 
     [HttpGet("{id:int}")]
@@ -58,5 +58,31 @@ public class DoorTypeController : ControllerBase
     public IActionResult Delete(int id)
     {
         return _doorTypeFactory.Delete(id) ? NoContent() : NotFound($"DoorType {id} not found.");
+    }
+
+    // ── Pricing Endpoints ──────────────────────────────────────────────────────
+
+    [HttpGet("{id:int}/prices")]
+    [ProducesResponseType(typeof(IEnumerable<DoorPricingEntry>), StatusCodes.Status200OK)]
+    public IActionResult GetPrices(int id)
+    {
+        return Ok(_doorTypeFactory.GetPrices(id));
+    }
+
+    [HttpPost("{id:int}/prices")]
+    [ProducesResponseType(typeof(DoorPricingEntry), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult AddPrice(int id, [FromBody] DoorPricingEntry entry)
+    {
+        var created = _doorTypeFactory.AddPrice(id, entry);
+        return created is null ? NotFound($"DoorType {id} not found.") : Ok(created);
+    }
+
+    [HttpDelete("{id:int}/prices/{entryId:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult DeletePrice(int id, int entryId)
+    {
+        return _doorTypeFactory.DeletePrice(id, entryId) ? NoContent() : NotFound();
     }
 }

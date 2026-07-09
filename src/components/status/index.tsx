@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusProps } from './model';
+import { StatusProps, ActiveStatusProps } from './model';
 
 import './styles.scss';
 
@@ -19,6 +19,14 @@ export const Status: React.FC<StatusProps> = (props) => {
         if (s === 'Overdue' || s === 'Void') return 'error';
         if (s === 'Invoice') return 'processing';
         if (s === 'Draft') return 'neutral';
+        return 'processing';
+    };
+
+    const orderStatusType = (s: string): 'good' | 'processing' | 'warn' | 'error' | 'neutral' => {
+        if (s === 'Delivered') return 'good';
+        if (s === 'Cancelled') return 'error';
+        if (s === 'Ready') return 'warn';
+        if (s === 'Received') return 'neutral';
         return 'processing';
     };
 
@@ -43,6 +51,9 @@ export const Status: React.FC<StatusProps> = (props) => {
                 break
             case "quotes":
                 typeValue = quotesStatusType(content)
+                break
+            case "order":
+                typeValue = orderStatusType(content)
         }
     }
 
@@ -50,3 +61,7 @@ export const Status: React.FC<StatusProps> = (props) => {
         <span className={`status-badge ${typeValue}`}>{content}</span>
     )
 }
+
+export const ActiveStatus: React.FC<ActiveStatusProps> = ({ active }) => (
+    <Status content={active ? 'Active' : 'Inactive'} type={active ? 'good' : 'warn'} />
+);

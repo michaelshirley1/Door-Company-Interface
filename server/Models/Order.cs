@@ -1,4 +1,4 @@
-﻿namespace BusinessApi.Models
+namespace BusinessApi.Models
 {
     public class OrderItem
     {
@@ -6,8 +6,10 @@
         public int? JobId { get; set; }
         public int? QuoteId { get; set; }
 
-        public string ItemType { get; set; } = "Door";
-        // Door | Handle | Hinge | Hardware
+        public string ItemType { get; set; } = "Prehung";
+        // Prehung | Hardware | DoorLeaf | Misc
+
+        public string? DoorConfiguration { get; set; }
 
         public int? DoorTypeId { get; set; }
         public int? HingeTypeId { get; set; }
@@ -29,6 +31,7 @@
 
         public string? TrackSystem { get; set; }
         public string? TrackType { get; set; }
+        public string? Reveal { get; set; }
 
         public int Quantity { get; set; } = 1;
         public decimal? UnitPrice { get; set; }
@@ -49,10 +52,13 @@
         public int Id { get; set; }
         public int? QuoteId { get; set; }
         public int CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
         public string? PoNumber { get; set; }
         public string Status { get; set; } = "Received";
         // Received | Confirmed | InProduction | Ready | Delivered | Cancelled
 
+        public int? JobId { get; set; }
+        public string? JobNumber { get; set; }
         public string? SiteAddress { get; set; }
         public string? SiteDescription { get; set; }
 
@@ -65,6 +71,5 @@
 
         public Customer Customer { get; set; } = null!;
         public Quote? Quote { get; set; }
-        public Job? Job { get; set; }
     }
 }

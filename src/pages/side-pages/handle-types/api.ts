@@ -1,17 +1,10 @@
-import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { HandleType } from './model';
 
-export const getHandleTypes = () =>
-    client.get<HandleType[]>('/handle-type').then(r => r.data);
+const crud = makeCrudApi<HandleType>('handle-type');
 
-export const getHandleType = (id: number) =>
-    client.get<HandleType>(`/handle-type/${id}`).then(r => r.data);
-
-export const createHandleType = (data: Omit<HandleType, 'id'>) =>
-    client.post<HandleType>('/handle-type', data).then(r => r.data);
-
-export const updateHandleType = (id: number, data: HandleType) =>
-    client.put<HandleType>(`/handle-type/${id}`, data).then(r => r.data);
-
-export const deleteHandleType = (id: number) =>
-    client.delete(`/handle-type/${id}`);
+export const getHandleTypes   = crud.getAll;
+export const getHandleType    = crud.get;
+export const createHandleType = crud.create;
+export const updateHandleType = crud.update;
+export const deleteHandleType = crud.remove;

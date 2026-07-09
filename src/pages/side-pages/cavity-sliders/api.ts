@@ -1,17 +1,10 @@
-import client from '../../../api/client';
+import { makeCrudApi } from '../../../api/crud';
 import { CavitySliderType } from './model';
 
-export const getCavitySliders = () =>
-    client.get<CavitySliderType[]>('/cavity-slider').then(r => r.data);
+const crud = makeCrudApi<CavitySliderType>('cavity-slider');
 
-export const getCavitySlider = (id: number) =>
-    client.get<CavitySliderType>(`/cavity-slider/${id}`).then(r => r.data);
-
-export const createCavitySlider = (data: Omit<CavitySliderType, 'id'>) =>
-    client.post<CavitySliderType>('/cavity-slider', data).then(r => r.data);
-
-export const updateCavitySlider = (id: number, data: CavitySliderType) =>
-    client.put<CavitySliderType>(`/cavity-slider/${id}`, data).then(r => r.data);
-
-export const deleteCavitySlider = (id: number) =>
-    client.delete(`/cavity-slider/${id}`);
+export const getCavitySliders   = crud.getAll;
+export const getCavitySlider    = crud.get;
+export const createCavitySlider = crud.create;
+export const updateCavitySlider = crud.update;
+export const deleteCavitySlider = crud.remove;

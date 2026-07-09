@@ -16,68 +16,146 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        position: relative;
     }
 
     .layout-toolbar {
         display: flex;
         align-items: center;
-        gap: 24px;
+        gap: 8px;
         padding: 0 24px;
-        height: 56px;
-        background: #FFFFFF;
+        height: 58px;
+        background: #ffffff;
         color: #1D2731;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 1px 0 #e8eaed, 0 2px 12px rgba(0,0,0,0.06);
+        position: relative;
+        z-index: 50;
 
         .layout-logo {
             background: none;
             border: none;
-            color: #fff;
-            font-size: 1.2rem;
+            color: #1D2731;
+            font-size: 1.1rem;
             font-weight: 700;
             cursor: pointer;
-            padding: 8px 12px;
+            padding: 6px 10px;
             letter-spacing: 0.5px;
             flex-shrink: 0;
+            margin-right: 12px;
 
             .layout-logo-icon {
-                height: 70px;
-                width: 70px;
+                height: 66px;
+                width: 66px;
             }
 
             &:hover {
-                opacity: 0.85;
+                opacity: 0.8;
             }
         }
 
         .layout-tabs {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
 
             button {
                 background: none;
                 border: none;
-                font-size: 0.85rem;
+                font-size: 0.84rem;
                 font-weight: 500;
-                padding: 8px 14px;
-                border-radius: 6px;
+                padding: 7px 13px;
+                border-radius: 7px;
                 cursor: pointer;
-                transition: background 0.2s, color 0.2s;
+                transition: background 0.15s, color 0.15s;
                 white-space: nowrap;
+                color: #555;
+                font-family: inherit;
+                letter-spacing: 0.1px;
 
                 &:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                    color: #888888;
+                    background: #f0f2f5;
+                    color: #1D2731;
                 }
             }
 
             .nav-divider {
                 width: 1px;
-                height: 20px;
-                background: rgba(0, 0, 0, 0.2);
+                height: 18px;
+                background: #e0e4e8;
                 margin: 0 6px;
                 flex-shrink: 0;
             }
+        }
+
+        .layout-signout {
+            margin-left: auto;
+            background: none;
+            border: 1px solid #dde1e7;
+            font-size: 0.81rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            border-radius: 7px;
+            cursor: pointer;
+            color: #555;
+            transition: background 0.15s, border-color 0.15s;
+            white-space: nowrap;
+            font-family: inherit;
+
+            &:hover {
+                background: #f4f5f7;
+                border-color: #c5cbd5;
+            }
+        }
+
+        .layout-hamburger {
+            display: none;
+            margin-left: auto;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: #1D2731;
+            padding: 4px 8px;
+            line-height: 1;
+        }
+    }
+
+    .layout-mobile-nav {
+        position: absolute;
+        top: 58px;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border-bottom: 1px solid #e8eaed;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        z-index: 100;
+
+        button {
+            background: none;
+            border: none;
+            text-align: left;
+            padding: 13px 24px;
+            font-size: 0.92rem;
+            font-weight: 500;
+            color: #1D2731;
+            cursor: pointer;
+            font-family: inherit;
+
+            &:hover {
+                background: #f4f5f7;
+            }
+        }
+
+        .mobile-nav-divider {
+            height: 1px;
+            background: #e8eaed;
+            margin: 4px 0;
+        }
+
+        .mobile-signout {
+            color: #dc2626;
         }
     }
 
@@ -86,6 +164,43 @@
         flex-direction: column;
         flex: 1;
         overflow-y: auto;
-        background-color: #FFFFFF
+        background-color: #FFFFFF;
     }
+
+    @media (max-width: 768px) {
+        .layout-toolbar {
+            padding: 0 16px;
+
+            .layout-tabs,
+            .layout-signout {
+                display: none;
+            }
+
+            .layout-hamburger {
+                display: block;
+            }
+        }
+    }
+}
+
+.xero-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0 0 0 12px;
+        opacity: 0.7;
+        &:hover { opacity: 1; }
+    }
+
+    &--ok    { background: #d4edda; color: #155724; }
+    &--error { background: #f8d7da; color: #721c24; }
 }

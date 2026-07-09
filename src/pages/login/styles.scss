@@ -1,0 +1,100 @@
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f4f5f7;
+    font-family: "Roboto", sans-serif;
+
+    .login-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e4e7ec;
+        padding: 40px 40px 36px;
+        width: 100%;
+        max-width: 380px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+
+        .login-logo {
+            height: 72px;
+            width: 72px;
+        }
+
+        .login-form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .login-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            label {
+                font-size: 0.73rem;
+                font-weight: 700;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            input {
+                padding: 10px 12px;
+                border: 1px solid #dde1e7;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                outline: none;
+                background: #fafbfc;
+                transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+                font-family: inherit;
+
+                &:focus {
+                    border-color: #1a1a2e;
+                    background: #fff;
+                    box-shadow: 0 0 0 3px rgba(26,26,46,0.07);
+                }
+            }
+        }
+
+        .login-error {
+            font-size: 0.82rem;
+            color: #c62828;
+            margin: 0;
+            font-weight: 500;
+        }
+
+        .login-button {
+            margin-top: 4px;
+            padding: 11px;
+            background: #1a1a2e;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+            font-family: inherit;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+
+            &:hover:not(:disabled) {
+                background: #2d2d4e;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+                transform: translateY(-1px);
+            }
+
+            &:active { transform: none; }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+    }
+}

@@ -7,5 +7,6 @@ export interface FormWrapperProps {
     onDelete?: () => void;
     extraActions?: React.ReactNode;
     error?: string | null;
+    submitting?: boolean;
     children: React.ReactNode;
 }

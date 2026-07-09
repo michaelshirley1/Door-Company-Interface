@@ -1,2 +1,2 @@
 export interface HardwarePageProps {}
-export type HardwareTab = 'handles' | 'hinges';
+export type HardwareTab = 'handles' | 'hinges' | 'jambs';

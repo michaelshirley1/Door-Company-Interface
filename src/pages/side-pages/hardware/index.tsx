@@ -1,348 +1,282 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { HardwarePageProps, HardwareTab } from './model';
 import { HandleType } from '../handle-types/model';
 import { HingeType } from '../hinge-types/model';
+import { JambType } from '../jamb-types/model';
 import { PageWrapper } from '../../../components/page-wrapper';
 import { Status } from '../../../components/status';
+import { Table } from '../../../components/table';
+import { HeaderItem } from '../../../components/table/model';
+import { FilterBar, FilterSelect } from '../../../components/filter-bar';
 import { getHandleTypes, createHandleType, updateHandleType, deleteHandleType } from '../handle-types/api';
 import { getHingeTypes, createHingeType, updateHingeType, deleteHingeType } from '../hinge-types/api';
+import { getJambTypes, createJambType, updateJambType, deleteJambType } from '../jamb-types/api';
 import Modal from '../../../components/modal';
 import Button from '../../../components/button';
+import { TextField, SelectField, TextAreaField } from '../../../components/form-field';
+import { useCatalogCrud } from '../../../hooks/useCatalogCrud';
+import { distinctValues } from '../../../shared/collections';
+import { todayISO } from '../../../shared/format';
+
+import Loading from '../../../components/loading';
 
 import './styles.scss';
 
 const blankHandleForm = () => ({ name: '', finish: '', mechanism: '', description: '', price: '', isActive: 'true' });
 const blankHingeForm  = () => ({ name: '', finish: '', sizeMm: '',   description: '', price: '', isActive: 'true' });
+const blankJambForm   = () => ({ name: '', description: '', price: '', isActive: 'true' });
+
+const activeStatus = (isActive: boolean) =>
+    <Status content={isActive ? 'Active' : 'Inactive'} type={isActive ? 'good' : 'warn'} />;
+
+const handleHeaders: HeaderItem<HandleType>[] = [
+    { id: 'name',      title: 'Name' },
+    { id: 'finish',    title: 'Finish' },
+    { id: 'mechanism', title: 'Mechanism' },
+    { id: 'price',     title: 'Price', render: (_, h) => `$${h.price.toFixed(2)}` },
+    { id: 'isActive',  title: 'Active', render: (_, h) => activeStatus(h.isActive) },
+];
+
+const hingeHeaders: HeaderItem<HingeType>[] = [
+    { id: 'name',     title: 'Name' },
+    { id: 'finish',   title: 'Finish' },
+    { id: 'sizeMm',   title: 'Size' },
+    { id: 'price',    title: 'Price', render: (_, h) => `$${h.price.toFixed(2)}` },
+    { id: 'isActive', title: 'Active', render: (_, h) => activeStatus(h.isActive) },
+];
+
+const jambHeaders: HeaderItem<JambType>[] = [
+    { id: 'name',        title: 'Name' },
+    { id: 'description', title: 'Description' },
+    { id: 'price',       title: 'Price', render: (_, j) => j.price > 0 ? `$${j.price.toFixed(2)}` : '—' },
+    { id: 'isActive',    title: 'Active', render: (_, j) => activeStatus(j.isActive) },
+];
 
 const HardwarePage: React.FC<HardwarePageProps> = () => {
     const [tab, setTab] = useState<HardwareTab>('handles');
-
-    const [handles, setHandles] = useState<HandleType[]>([]);
-    const [hinges,  setHinges]  = useState<HingeType[]>([]);
 
     const [handleMechanism, setHandleMechanism] = useState('');
     const [handleFinish,    setHandleFinish]    = useState('');
     const [hingeFinish,     setHingeFinish]     = useState('');
     const [hingeSizeMm,     setHingeSizeMm]     = useState('');
 
-    const [handleModalOpen, setHandleModalOpen] = useState(false);
-    const [editingHandle,   setEditingHandle]   = useState<HandleType | null>(null);
-    const [handleForm,      setHandleForm]      = useState(blankHandleForm());
+    const handleCrud = useCatalogCrud<HandleType, ReturnType<typeof blankHandleForm>>({
+        fetchAll: getHandleTypes,
+        create:   createHandleType,
+        update:   updateHandleType,
+        remove:   deleteHandleType,
+        blankForm: blankHandleForm,
+        toForm: h => ({ name: h.name, finish: h.finish ?? '', mechanism: h.mechanism ?? '', description: h.description ?? '', price: h.price.toString(), isActive: String(h.isActive) }),
+        toPayload: (f, editing) => ({
+            name:        f.name,
+            finish:      f.finish      || null,
+            mechanism:   f.mechanism   || null,
+            description: f.description || null,
+            price:       parseFloat(f.price) || 0,
+            isActive:    f.isActive === 'true',
+            createdAt:   editing?.createdAt ?? todayISO(),
+        }),
+        getId: h => h.id,
+    });
 
-    const [hingeModalOpen,  setHingeModalOpen]  = useState(false);
-    const [editingHinge,    setEditingHinge]    = useState<HingeType | null>(null);
-    const [hingeForm,       setHingeForm]       = useState(blankHingeForm());
+    const hingeCrud = useCatalogCrud<HingeType, ReturnType<typeof blankHingeForm>>({
+        fetchAll: getHingeTypes,
+        create:   createHingeType,
+        update:   updateHingeType,
+        remove:   deleteHingeType,
+        blankForm: blankHingeForm,
+        toForm: h => ({ name: h.name, finish: h.finish ?? '', sizeMm: h.sizeMm ?? '', description: h.description ?? '', price: h.price.toString(), isActive: String(h.isActive) }),
+        toPayload: (f, editing) => ({
+            name:        f.name,
+            finish:      f.finish      || null,
+            sizeMm:      f.sizeMm      || null,
+            description: f.description || null,
+            price:       parseFloat(f.price) || 0,
+            isActive:    f.isActive === 'true',
+            createdAt:   editing?.createdAt ?? todayISO(),
+        }),
+        getId: h => h.id,
+    });
 
-    useEffect(() => {
-        getHandleTypes().then(setHandles);
-        getHingeTypes().then(setHinges);
-    }, []);
-
-    // Handle modal
-    const openNewHandle = () => { setEditingHandle(null); setHandleForm(blankHandleForm()); setHandleModalOpen(true); };
-    const openEditHandle = (h: HandleType) => {
-        setEditingHandle(h);
-        setHandleForm({ name: h.name, finish: h.finish ?? '', mechanism: h.mechanism ?? '', description: h.description ?? '', price: h.price.toString(), isActive: String(h.isActive) });
-        setHandleModalOpen(true);
-    };
-    const closeHandleModal = () => { setHandleModalOpen(false); setEditingHandle(null); };
-    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-        setHandleForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-
-    const saveHandle = () => {
-        const data = {
-            name:        handleForm.name,
-            finish:      handleForm.finish      || null,
-            mechanism:   handleForm.mechanism   || null,
-            description: handleForm.description || null,
-            price:       parseFloat(handleForm.price) || 0,
-            isActive:    handleForm.isActive === 'true',
-            createdAt:   editingHandle?.createdAt ?? new Date().toISOString().split('T')[0],
-        };
-        const action = editingHandle
-            ? updateHandleType(editingHandle.id, { ...editingHandle, ...data })
-            : createHandleType(data);
-        action.then(result => {
-            setHandles(prev => editingHandle
-                ? prev.map(h => h.id === editingHandle.id ? result : h)
-                : [...prev, result]
-            );
-            closeHandleModal();
-        });
-    };
-
-    const deleteHandle = () => {
-        if (!editingHandle) return;
-        deleteHandleType(editingHandle.id).then(() => {
-            setHandles(prev => prev.filter(h => h.id !== editingHandle.id));
-            closeHandleModal();
-        });
-    };
-
-    // Hinge modal
-    const openNewHinge = () => { setEditingHinge(null); setHingeForm(blankHingeForm()); setHingeModalOpen(true); };
-    const openEditHinge = (h: HingeType) => {
-        setEditingHinge(h);
-        setHingeForm({ name: h.name, finish: h.finish ?? '', sizeMm: h.sizeMm ?? '', description: h.description ?? '', price: h.price.toString(), isActive: String(h.isActive) });
-        setHingeModalOpen(true);
-    };
-    const closeHingeModal = () => { setHingeModalOpen(false); setEditingHinge(null); };
-    const hingeFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-        setHingeForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-
-    const saveHinge = () => {
-        const data = {
-            name:        hingeForm.name,
-            finish:      hingeForm.finish      || null,
-            sizeMm:      hingeForm.sizeMm      || null,
-            description: hingeForm.description || null,
-            price:       parseFloat(hingeForm.price) || 0,
-            isActive:    hingeForm.isActive === 'true',
-            createdAt:   editingHinge?.createdAt ?? new Date().toISOString().split('T')[0],
-        };
-        const action = editingHinge
-            ? updateHingeType(editingHinge.id, { ...editingHinge, ...data })
-            : createHingeType(data);
-        action.then(result => {
-            setHinges(prev => editingHinge
-                ? prev.map(h => h.id === editingHinge.id ? result : h)
-                : [...prev, result]
-            );
-            closeHingeModal();
-        });
-    };
-
-    const deleteHinge = () => {
-        if (!editingHinge) return;
-        deleteHingeType(editingHinge.id).then(() => {
-            setHinges(prev => prev.filter(h => h.id !== editingHinge.id));
-            closeHingeModal();
-        });
-    };
+    const jambCrud = useCatalogCrud<JambType, ReturnType<typeof blankJambForm>>({
+        fetchAll: getJambTypes,
+        create:   createJambType,
+        update:   updateJambType,
+        remove:   deleteJambType,
+        blankForm: blankJambForm,
+        toForm: j => ({ name: j.name, description: j.description ?? '', price: j.price.toString(), isActive: String(j.isActive) }),
+        toPayload: (f, editing) => ({
+            name:        f.name,
+            description: f.description || null,
+            price:       parseFloat(f.price) || 0,
+            isActive:    f.isActive === 'true',
+            createdAt:   editing?.createdAt ?? todayISO(),
+        }),
+        getId: j => j.id,
+    });
 
     // Filter options
-    const availableMechanisms    = [...new Set(handles.map(h => h.mechanism).filter(Boolean))].sort() as string[];
-    const availableHandleFinishes = [...new Set(handles.map(h => h.finish).filter(Boolean))].sort() as string[];
-    const availableHingeFinishes  = [...new Set(hinges.map(h => h.finish).filter(Boolean))].sort() as string[];
-    const availableHingeSizes     = [...new Set(hinges.map(h => h.sizeMm).filter(Boolean))].sort() as string[];
+    const availableMechanisms     = distinctValues(handleCrud.items, 'mechanism');
+    const availableHandleFinishes = distinctValues(handleCrud.items, 'finish');
+    const availableHingeFinishes  = distinctValues(hingeCrud.items, 'finish');
+    const availableHingeSizes     = distinctValues(hingeCrud.items, 'sizeMm');
 
-    const filteredHandles = handles.filter(h => {
+    const filteredHandles = handleCrud.items.filter(h => {
         if (handleMechanism && h.mechanism !== handleMechanism) return false;
         if (handleFinish    && h.finish    !== handleFinish)    return false;
         return true;
     });
 
-    const filteredHinges = hinges.filter(h => {
+    const filteredHinges = hingeCrud.items.filter(h => {
         if (hingeFinish && h.finish  !== hingeFinish) return false;
         if (hingeSizeMm && h.sizeMm  !== hingeSizeMm) return false;
         return true;
     });
 
+    if (handleCrud.loading || hingeCrud.loading || jambCrud.loading) return <Loading />;
+
     return (
         <PageWrapper
             title="Hardware"
-            buttonTitle={tab === 'handles' ? 'New Handle' : 'New Hinge'}
-            buttonAction={tab === 'handles' ? openNewHandle : openNewHinge}
+            buttonTitle={tab === 'handles' ? 'New Handle' : tab === 'hinges' ? 'New Hinge' : 'New Jamb'}
+            buttonAction={tab === 'handles' ? handleCrud.openNew : tab === 'hinges' ? hingeCrud.openNew : jambCrud.openNew}
         >
             <div className="hw-tabs">
                 <button className={tab === 'handles' ? 'hw-tab active' : 'hw-tab'} onClick={() => setTab('handles')}>Handles</button>
                 <button className={tab === 'hinges'  ? 'hw-tab active' : 'hw-tab'} onClick={() => setTab('hinges')}>Hinges</button>
+                <button className={tab === 'jambs'   ? 'hw-tab active' : 'hw-tab'} onClick={() => setTab('jambs')}>Jambs</button>
             </div>
 
             {tab === 'handles' && (
                 <div className="hw-section">
-                    <div className="hw-filters">
-                        <div className="hw-filter-group">
-                            <label>Mechanism</label>
-                            <select value={handleMechanism} onChange={e => setHandleMechanism(e.target.value)}>
-                                <option value="">All</option>
-                                {availableMechanisms.map(m => <option key={m} value={m}>{m}</option>)}
-                            </select>
-                        </div>
-                        <div className="hw-filter-group">
-                            <label>Finish</label>
-                            <select value={handleFinish} onChange={e => setHandleFinish(e.target.value)}>
-                                <option value="">All</option>
-                                {availableHandleFinishes.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-                        {(handleMechanism || handleFinish) && (
-                            <button className="hw-clear" onClick={() => { setHandleMechanism(''); setHandleFinish(''); }}>Clear</button>
-                        )}
-                    </div>
+                    <FilterBar
+                        showClear={!!(handleMechanism || handleFinish)}
+                        onClear={() => { setHandleMechanism(''); setHandleFinish(''); }}
+                    >
+                        <FilterSelect label="Mechanism" value={handleMechanism} onChange={setHandleMechanism} options={availableMechanisms} />
+                        <FilterSelect label="Finish" value={handleFinish} onChange={setHandleFinish} options={availableHandleFinishes} />
+                    </FilterBar>
 
-                    <table className="hw-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Finish</th>
-                                <th>Mechanism</th>
-                                <th>Price</th>
-                                <th>Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredHandles.length === 0 ? (
-                                <tr><td colSpan={5} className="hw-empty-cell">No handles match the selected filters.</td></tr>
-                            ) : (
-                                filteredHandles.map(h => (
-                                    <tr key={h.id} className="hw-row" onClick={() => openEditHandle(h)}>
-                                        <td>{h.name}</td>
-                                        <td>{h.finish ?? '—'}</td>
-                                        <td>{h.mechanism ?? '—'}</td>
-                                        <td>${h.price.toFixed(2)}</td>
-                                        <td><Status content={h.isActive ? 'Active' : 'Inactive'} type={h.isActive ? 'good' : 'warn'} /></td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <Table
+                        headers={handleHeaders}
+                        rows={filteredHandles}
+                        onRowClick={handleCrud.openEdit}
+                        emptyMessage="No handles match the selected filters."
+                    />
                 </div>
             )}
 
             {tab === 'hinges' && (
                 <div className="hw-section">
-                    <div className="hw-filters">
-                        <div className="hw-filter-group">
-                            <label>Finish</label>
-                            <select value={hingeFinish} onChange={e => setHingeFinish(e.target.value)}>
-                                <option value="">All</option>
-                                {availableHingeFinishes.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                        </div>
-                        <div className="hw-filter-group">
-                            <label>Size</label>
-                            <select value={hingeSizeMm} onChange={e => setHingeSizeMm(e.target.value)}>
-                                <option value="">All</option>
-                                {availableHingeSizes.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                        </div>
-                        {(hingeFinish || hingeSizeMm) && (
-                            <button className="hw-clear" onClick={() => { setHingeFinish(''); setHingeSizeMm(''); }}>Clear</button>
-                        )}
-                    </div>
+                    <FilterBar
+                        showClear={!!(hingeFinish || hingeSizeMm)}
+                        onClear={() => { setHingeFinish(''); setHingeSizeMm(''); }}
+                    >
+                        <FilterSelect label="Finish" value={hingeFinish} onChange={setHingeFinish} options={availableHingeFinishes} />
+                        <FilterSelect label="Size" value={hingeSizeMm} onChange={setHingeSizeMm} options={availableHingeSizes} />
+                    </FilterBar>
 
-                    <table className="hw-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Finish</th>
-                                <th>Size</th>
-                                <th>Price</th>
-                                <th>Active</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredHinges.length === 0 ? (
-                                <tr><td colSpan={5} className="hw-empty-cell">No hinges match the selected filters.</td></tr>
-                            ) : (
-                                filteredHinges.map(h => (
-                                    <tr key={h.id} className="hw-row" onClick={() => openEditHinge(h)}>
-                                        <td>{h.name}</td>
-                                        <td>{h.finish ?? '—'}</td>
-                                        <td>{h.sizeMm ?? '—'}</td>
-                                        <td>${h.price.toFixed(2)}</td>
-                                        <td><Status content={h.isActive ? 'Active' : 'Inactive'} type={h.isActive ? 'good' : 'warn'} /></td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <Table
+                        headers={hingeHeaders}
+                        rows={filteredHinges}
+                        onRowClick={hingeCrud.openEdit}
+                        emptyMessage="No hinges match the selected filters."
+                    />
+                </div>
+            )}
+
+            {tab === 'jambs' && (
+                <div className="hw-section">
+                    <Table
+                        headers={jambHeaders}
+                        rows={jambCrud.items}
+                        onRowClick={jambCrud.openEdit}
+                        emptyMessage="No jamb types found."
+                    />
                 </div>
             )}
 
             {/* Handle Modal */}
             <Modal
-                isOpen={handleModalOpen}
-                onClose={closeHandleModal}
-                title={editingHandle ? `Edit ${editingHandle.name}` : 'New Handle'}
-                onConfirm={saveHandle}
+                isOpen={handleCrud.modalOpen}
+                onClose={handleCrud.closeModal}
+                title={handleCrud.editing ? `Edit ${handleCrud.editing.name}` : 'New Handle'}
+                onConfirm={handleCrud.handleSave}
                 confirmLabel="Save"
             >
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Name</label>
-                        <input name="name" value={handleForm.name} onChange={handleFormChange} placeholder="e.g. Lever Handle" />
-                    </div>
-                    <div className="form-field">
-                        <label>Active</label>
-                        <select name="isActive" value={handleForm.isActive} onChange={handleFormChange}>
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                        </select>
-                    </div>
+                    <TextField label="Name" name="name" value={handleCrud.form.name} onChange={handleCrud.handleChange} placeholder="e.g. Lever Handle" />
+                    <SelectField label="Active" name="isActive" value={handleCrud.form.isActive} onChange={handleCrud.handleChange}>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </SelectField>
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Finish</label>
-                        <input name="finish" value={handleForm.finish} onChange={handleFormChange} placeholder="e.g. Satin Chrome" />
-                    </div>
-                    <div className="form-field">
-                        <label>Mechanism</label>
-                        <input name="mechanism" value={handleForm.mechanism} onChange={handleFormChange} placeholder="e.g. Passage, Privacy" />
-                    </div>
+                    <TextField label="Finish" name="finish" value={handleCrud.form.finish} onChange={handleCrud.handleChange} placeholder="e.g. Satin Chrome" />
+                    <TextField label="Mechanism" name="mechanism" value={handleCrud.form.mechanism} onChange={handleCrud.handleChange} placeholder="e.g. Passage, Privacy" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Price</label>
-                        <input type="number" name="price" value={handleForm.price} onChange={handleFormChange} placeholder="0.00" />
-                    </div>
+                    <TextField label="Price" type="number" name="price" value={handleCrud.form.price} onChange={handleCrud.handleChange} placeholder="0.00" />
                 </div>
-                <div className="form-field">
-                    <label>Description</label>
-                    <textarea name="description" value={handleForm.description} onChange={handleFormChange} />
-                </div>
-                {editingHandle && (
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
-                        <Button variant="danger" onClick={deleteHandle}>Delete Handle</Button>
+                <TextAreaField label="Description" name="description" value={handleCrud.form.description} onChange={handleCrud.handleChange} />
+                {handleCrud.editing && (
+                    <div className="delete-divider">
+                        <Button variant="danger" onClick={handleCrud.handleDelete}>Delete Handle</Button>
                     </div>
                 )}
             </Modal>
 
             {/* Hinge Modal */}
             <Modal
-                isOpen={hingeModalOpen}
-                onClose={closeHingeModal}
-                title={editingHinge ? `Edit ${editingHinge.name}` : 'New Hinge'}
-                onConfirm={saveHinge}
+                isOpen={hingeCrud.modalOpen}
+                onClose={hingeCrud.closeModal}
+                title={hingeCrud.editing ? `Edit ${hingeCrud.editing.name}` : 'New Hinge'}
+                onConfirm={hingeCrud.handleSave}
                 confirmLabel="Save"
             >
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Name</label>
-                        <input name="name" value={hingeForm.name} onChange={hingeFormChange} placeholder="e.g. Butt Hinge" />
-                    </div>
-                    <div className="form-field">
-                        <label>Active</label>
-                        <select name="isActive" value={hingeForm.isActive} onChange={hingeFormChange}>
-                            <option value="true">Active</option>
-                            <option value="false">Inactive</option>
-                        </select>
-                    </div>
+                    <TextField label="Name" name="name" value={hingeCrud.form.name} onChange={hingeCrud.handleChange} placeholder="e.g. Butt Hinge" />
+                    <SelectField label="Active" name="isActive" value={hingeCrud.form.isActive} onChange={hingeCrud.handleChange}>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </SelectField>
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Finish</label>
-                        <input name="finish" value={hingeForm.finish} onChange={hingeFormChange} placeholder="e.g. Satin Stainless" />
-                    </div>
-                    <div className="form-field">
-                        <label>Size (mm)</label>
-                        <input name="sizeMm" value={hingeForm.sizeMm} onChange={hingeFormChange} placeholder="e.g. 100mm" />
-                    </div>
+                    <TextField label="Finish" name="finish" value={hingeCrud.form.finish} onChange={hingeCrud.handleChange} placeholder="e.g. Satin Stainless" />
+                    <TextField label="Size (mm)" name="sizeMm" value={hingeCrud.form.sizeMm} onChange={hingeCrud.handleChange} placeholder="e.g. 100mm" />
                 </div>
                 <div className="form-row">
-                    <div className="form-field">
-                        <label>Price</label>
-                        <input type="number" name="price" value={hingeForm.price} onChange={hingeFormChange} placeholder="0.00" />
+                    <TextField label="Price" type="number" name="price" value={hingeCrud.form.price} onChange={hingeCrud.handleChange} placeholder="0.00" />
+                </div>
+                <TextAreaField label="Description" name="description" value={hingeCrud.form.description} onChange={hingeCrud.handleChange} />
+                {hingeCrud.editing && (
+                    <div className="delete-divider">
+                        <Button variant="danger" onClick={hingeCrud.handleDelete}>Delete Hinge</Button>
                     </div>
+                )}
+            </Modal>
+            {/* Jamb Modal */}
+            <Modal
+                isOpen={jambCrud.modalOpen}
+                onClose={jambCrud.closeModal}
+                title={jambCrud.editing ? `Edit ${jambCrud.editing.name}` : 'New Jamb'}
+                onConfirm={jambCrud.handleSave}
+                confirmLabel="Save"
+            >
+                <div className="form-row">
+                    <TextField label="Name" name="name" value={jambCrud.form.name} onChange={jambCrud.handleChange} placeholder="e.g. 112 19 Flat" />
+                    <SelectField label="Active" name="isActive" value={jambCrud.form.isActive} onChange={jambCrud.handleChange}>
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </SelectField>
                 </div>
-                <div className="form-field">
-                    <label>Description</label>
-                    <textarea name="description" value={hingeForm.description} onChange={hingeFormChange} />
+                <div className="form-row">
+                    <TextField label="Price" type="number" name="price" value={jambCrud.form.price} onChange={jambCrud.handleChange} placeholder="0.00" />
                 </div>
-                {editingHinge && (
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
-                        <Button variant="danger" onClick={deleteHinge}>Delete Hinge</Button>
+                <TextAreaField label="Description" name="description" value={jambCrud.form.description} onChange={jambCrud.handleChange} placeholder="e.g. 112mm flat jamb, 19mm stop" />
+                {jambCrud.editing && (
+                    <div className="delete-divider">
+                        <Button variant="danger" onClick={jambCrud.handleDelete}>Delete Jamb</Button>
                     </div>
                 )}
             </Modal>
