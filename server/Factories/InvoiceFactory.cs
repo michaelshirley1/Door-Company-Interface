@@ -1,5 +1,6 @@
 using BusinessApi.Data;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
@@ -16,10 +17,12 @@ namespace BusinessApi.Factories
     public class InvoiceFactory : IInvoiceFactory
     {
         private readonly AppDbContext _db;
+        private readonly IDocumentNumberService _numberService;
 
-        public InvoiceFactory(AppDbContext db)
+        public InvoiceFactory(AppDbContext db, IDocumentNumberService numberService)
         {
             _db = db;
+            _numberService = numberService;
         }
 
         public IEnumerable<Invoice> GetAll() =>
@@ -30,6 +33,7 @@ namespace BusinessApi.Factories
 
         public Invoice Create(Invoice invoice)
         {
+            invoice.InvoiceNumber = _numberService.Next("Invoice", "INV-", 4);
             invoice.CreatedAt = DateTime.UtcNow;
             invoice.UpdatedAt = DateTime.UtcNow;
             _db.Invoices.Add(invoice);
@@ -47,7 +51,6 @@ namespace BusinessApi.Factories
             existing.QuoteId = invoice.QuoteId;
             existing.QuoteNumber = invoice.QuoteNumber;
             existing.CustomerName = invoice.CustomerName;
-            existing.InvoiceNumber = invoice.InvoiceNumber;
             existing.Status = invoice.Status;
             existing.Subtotal = invoice.Subtotal;
             existing.TaxRate = invoice.TaxRate;

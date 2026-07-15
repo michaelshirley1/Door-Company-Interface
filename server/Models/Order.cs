@@ -7,13 +7,15 @@ namespace BusinessApi.Models
         public int? QuoteId { get; set; }
 
         public string ItemType { get; set; } = "Prehung";
-        // Prehung | Hardware | DoorLeaf | Misc
 
         public string? DoorConfiguration { get; set; }
 
         public int? DoorTypeId { get; set; }
         public int? HingeTypeId { get; set; }
         public int? HandleTypeId { get; set; }
+        public int? CavitySliderTypeId { get; set; }
+        public int? TrackTypeId { get; set; }
+        public int? ProductId { get; set; }
 
         public string? Room { get; set; }
 
@@ -29,12 +31,15 @@ namespace BusinessApi.Models
         public string? Glazing { get; set; }
         public string? FireRating { get; set; }
 
+        public int? HingeCount { get; set; }
         public string? TrackSystem { get; set; }
         public string? TrackType { get; set; }
         public string? Reveal { get; set; }
 
         public int Quantity { get; set; } = 1;
         public decimal? UnitPrice { get; set; }
+        public float? MarginPercent { get; set; }
+        public bool IsDispatched { get; set; } = false;
 
         public string? Notes { get; set; }
         public int SortOrder { get; set; } = 0;
@@ -45,6 +50,9 @@ namespace BusinessApi.Models
         public DoorType? DoorType { get; set; }
         public HingeType? HingeType { get; set; }
         public HandleType? HandleType { get; set; }
+        public CavitySliderType? CavitySliderType { get; set; }
+        public TrackType? TrackTypeRef { get; set; }
+        public Product? Product { get; set; }
     }
 
     public class PurchaseOrder
@@ -55,7 +63,6 @@ namespace BusinessApi.Models
         public string CustomerName { get; set; } = string.Empty;
         public string? PoNumber { get; set; }
         public string Status { get; set; } = "Received";
-        // Received | Confirmed | InProduction | Ready | Delivered | Cancelled
 
         public int? JobId { get; set; }
         public string? JobNumber { get; set; }

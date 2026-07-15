@@ -34,7 +34,6 @@ public class XeroService : IXeroService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<XeroService> _logger;
 
-    // In-memory token storage (single tenant)
     private string? _accessToken;
     private string? _refreshToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
@@ -170,8 +169,8 @@ public class XeroService : IXeroService
             Description = BuildLineDescription(item),
             Quantity    = item.Quantity > 0 ? (int)item.Quantity : 1,
             UnitAmount  = item.UnitPrice ?? 0m,
-            TaxType     = "OUTPUT2",  // NZ 15% GST
-            AccountCode = "200",      // Sales
+            TaxType     = "OUTPUT2",
+            AccountCode = "200",
         }).ToArray();
 
         var payload = new

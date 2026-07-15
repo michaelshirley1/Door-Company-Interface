@@ -12,24 +12,34 @@ import { getCustomers } from '../../customers/api';
 import { DoorType } from '../../../side-pages/door-types/model';
 import { HingeType } from '../../../side-pages/hinge-types/model';
 import { HandleType } from '../../../side-pages/handle-types/model';
-import { JambType } from '../../../side-pages/jamb-types/model';
+import { JambType, JambRequirement } from '../../../side-pages/jamb-types/model';
+import { CavitySliderType } from '../../../side-pages/cavity-sliders/model';
+import { TrackType } from '../../../side-pages/track-types/model';
+import { Product } from '../../../side-pages/products/model';
 import { getDoorTypes } from '../../../side-pages/door-types/api';
 import { getHingeTypes } from '../../../side-pages/hinge-types/api';
 import { getHandleTypes } from '../../../side-pages/handle-types/api';
-import { getJambTypes } from '../../../side-pages/jamb-types/api';
+import { getJambTypes, getJambRequirements } from '../../../side-pages/jamb-types/api';
+import { getCavitySliders } from '../../../side-pages/cavity-sliders/api';
+import { getTrackTypes } from '../../../side-pages/track-types/api';
+import { getProducts } from '../../../side-pages/products/api';
 import { OrderItem } from '../../jobs/model';
 import QuoteItemModal from './item-modal';
 import { generateQuotePdf } from '../../../../utils/jobPdf';
+import { openQuoteEmail } from '../../../../shared/email';
 import { createOrder } from '../../orders/api';
 import ReadOnlyField from '../../../../components/read-only-field';
 import { formatCurrency, todayISO } from '../../../../shared/format';
 import { getApiErrorMessage } from '../../../../api/errors';
+import { DEFAULT_MARGIN_PERCENT } from '../../../../shared/constants';
+import { useAuth } from '../../../../auth/AuthContext';
 
 const calcItemsTotal = (items: OrderItem[]): number =>
     items.reduce((sum, item) => sum + ((item.unitPrice ?? 0) * (item.quantity ?? 1)), 0);
 
 const QuoteFormPage: React.FC = () => {
     const navigate = useNavigate();
+    const { isAdmin } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [existing, setExisting] = useState<Quote | undefined>();
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -37,6 +47,10 @@ const QuoteFormPage: React.FC = () => {
     const [hingeTypes, setHingeTypes] = useState<HingeType[]>([]);
     const [handleTypes, setHandleTypes] = useState<HandleType[]>([]);
     const [jambTypes, setJambTypes] = useState<JambType[]>([]);
+    const [jambRequirements, setJambRequirements] = useState<JambRequirement[]>([]);
+    const [cavitySliderTypes, setCavitySliderTypes] = useState<CavitySliderType[]>([]);
+    const [trackTypes, setTrackTypes] = useState<TrackType[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [addModal, setAddModal] = useState(false);
     const [editIndex, setEditIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
@@ -68,6 +82,10 @@ const QuoteFormPage: React.FC = () => {
             getHingeTypes().then(setHingeTypes),
             getHandleTypes().then(setHandleTypes),
             getJambTypes().then(setJambTypes),
+            getJambRequirements().then(setJambRequirements),
+            getCavitySliders().then(setCavitySliderTypes),
+            getTrackTypes().then(setTrackTypes),
+            getProducts().then(setProducts),
             getQuote(parseInt(id)).then(quote => {
                 setExisting(quote);
                 setForm({
@@ -90,6 +108,8 @@ const QuoteFormPage: React.FC = () => {
     }, [id]);
 
     const itemsTotal = calcItemsTotal(form.items);
+    const selectedCustomer = customers.find(c => c.id === parseInt(form.customerId));
+    const defaultMarginPercent = selectedCustomer?.marginPercent ?? DEFAULT_MARGIN_PERCENT;
 
     const getReturnPath = () => {
         if (form.jobId) return `/jobs/${form.jobId}/edit`;
@@ -180,6 +200,12 @@ const QuoteFormPage: React.FC = () => {
         generateQuotePdf({ ...existing, items: form.items }, { doorTypes, hingeTypes, handleTypes });
     };
 
+    const handleSendEmail = () => {
+        if (!existing) return;
+        generateQuotePdf({ ...existing, items: form.items }, { doorTypes, hingeTypes, handleTypes });
+        openQuoteEmail({ toEmail: selectedCustomer?.email, quoteNumber: existing.quoteNumber, customerName: existing.customerName });
+    };
+
     const handleSaveItem = (item: OrderItem, idx: number | null) => {
         if (idx !== null) {
             setForm(prev => ({ ...prev, items: prev.items.map((it, i) => i === idx ? item : it) }));
@@ -198,6 +224,9 @@ const QuoteFormPage: React.FC = () => {
             <Button variant="secondary" onClick={handleDownloadPdf} disabled={saving}>
                 Download PDF
             </Button>
+            <Button variant="secondary" onClick={handleSendEmail} disabled={saving} title="Downloads the PDF and opens your email client — attach the downloaded file before sending">
+                Send Email
+            </Button>
             {['Draft', 'Sent', 'Accepted'].includes(form.status) && (
                 <Button variant="primary" onClick={handleCreateOrder} loading={creatingOrder} disabled={saving || creatingOrder}>
                     Create Order
@@ -214,7 +243,7 @@ const QuoteFormPage: React.FC = () => {
                 title={existing ? `Quote ${existing.quoteNumber}` : 'New Quote'}
                 onSubmit={handleSubmit}
                 onCancel={() => navigate(getReturnPath())}
-                onDelete={existing ? handleDelete : undefined}
+                onDelete={existing && isAdmin ? handleDelete : undefined}
                 extraActions={workflowActions}
                 error={error}
                 submitting={saving}
@@ -233,7 +262,7 @@ const QuoteFormPage: React.FC = () => {
                 )}
 
                 <div className="form-row">
-                    <TextField label="Quote Number" name="quoteNumber" value={form.quoteNumber} onChange={handleChange} placeholder="QTE-001" />
+                    <ReadOnlyField label="Quote Number" value={form.quoteNumber || 'Assigned on save'} />
                     <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
                         <option value="Draft">Draft</option>
                         <option value="Sent">Sent</option>
@@ -303,6 +332,11 @@ const QuoteFormPage: React.FC = () => {
                 hingeTypes={hingeTypes}
                 handleTypes={handleTypes}
                 jambTypes={jambTypes}
+                jambRequirements={jambRequirements}
+                cavitySliderTypes={cavitySliderTypes}
+                trackTypes={trackTypes}
+                products={products}
+                defaultMarginPercent={defaultMarginPercent}
                 editIndex={editIndex}
                 initialItem={editIndex !== null ? form.items[editIndex] : null}
                 onAdd={handleSaveItem}

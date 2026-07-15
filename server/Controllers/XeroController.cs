@@ -6,18 +6,21 @@ using Microsoft.AspNetCore.Mvc;
 namespace BusinessApi.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("xero")]
 public class XeroController : ControllerBase
 {
     private readonly IXeroService _xeroService;
     private readonly IQuoteFactory _quoteFactory;
     private readonly IConfiguration _config;
+    private readonly ICurrentUserService _currentUser;
 
-    public XeroController(IXeroService xeroService, IQuoteFactory quoteFactory, IConfiguration config)
+    public XeroController(IXeroService xeroService, IQuoteFactory quoteFactory, IConfiguration config, ICurrentUserService currentUser)
     {
         _xeroService = xeroService;
         _quoteFactory = quoteFactory;
         _config = config;
+        _currentUser = currentUser;
     }
 
     /// <summary>Redirects the browser to Xero's OAuth2 authorization page.</summary>
@@ -52,8 +55,10 @@ public class XeroController : ControllerBase
 
     /// <summary>Clears stored Xero tokens.</summary>
     [HttpPost("disconnect")]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public IActionResult Disconnect()
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         _xeroService.Disconnect();
         return NoContent();
     }

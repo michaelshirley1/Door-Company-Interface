@@ -1,10 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-/**
- * Options for the generic catalog CRUD hook.
- * `remove` is typed `Promise<unknown>` so the axios-based CRUD apis
- * (which resolve with the raw response) are directly assignable.
- */
 export interface UseCatalogCrudOptions<T, FormT> {
     fetchAll: () => Promise<T[]>;
     create: (data: any) => Promise<T>;
@@ -14,20 +9,10 @@ export interface UseCatalogCrudOptions<T, FormT> {
     toForm: (item: T) => FormT;
     toPayload: (form: FormT, editing: T | null) => any;
     getId: (item: T) => number;
-    /** Optional transform/side-effect applied to the saved item before it is merged into `items`. */
     afterSave?: (saved: T, editing: T | null) => T | Promise<T>;
-    /** Optional extra cleanup run whenever the modal closes (including after save/delete). */
     onClose?: () => void;
 }
 
-/**
- * Shared modal-CRUD state machine for the catalog pages
- * (cavity sliders, hardware, doors). Fetches all items on mount and
- * exposes the standard openNew/openEdit/save/delete plumbing.
- *
- * On update, the payload from `toPayload` is merged over the item being
- * edited (`{ ...editing, ...payload }`), matching the previous per-page logic.
- */
 export function useCatalogCrud<T, FormT>(options: UseCatalogCrudOptions<T, FormT>) {
     const { fetchAll, create, update, remove, blankForm, toForm, toPayload, getId, afterSave, onClose } = options;
 
@@ -39,7 +24,6 @@ export function useCatalogCrud<T, FormT>(options: UseCatalogCrudOptions<T, FormT
 
     useEffect(() => {
         fetchAll().then(setItems).finally(() => setLoading(false));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const openNew = () => {

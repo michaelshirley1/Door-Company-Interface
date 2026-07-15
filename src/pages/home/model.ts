@@ -1,9 +1,12 @@
 export interface HomePageProps {}
 
-export interface SummaryCard {
+export interface KpiCard {
     label: string;
-    value: number;
+    value: string;
     route: string;
+    deltaPct?: number | null;
+    subtitle?: string;
+    subtitleTone?: 'neutral' | 'critical';
 }
 
 export interface ActiveJob {

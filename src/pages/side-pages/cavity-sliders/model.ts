@@ -5,6 +5,8 @@ export interface CavitySliderType {
     unitType?: string | null;
     studPocket?: string | null;
     finishDetail?: string | null;
+    colour?: string | null;
+    labourCost?: number | null;
     heightMm?: number | null;
     widthRange?: string | null;
     price?: number | null;

@@ -1,0 +1,14 @@
+.user-role-select {
+    padding: 6px 10px;
+    border: 1px solid #dde1e7;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: #fafbfc;
+    color: #1a1a2e;
+    font-family: inherit;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}

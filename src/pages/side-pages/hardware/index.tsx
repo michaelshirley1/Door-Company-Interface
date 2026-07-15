@@ -115,7 +115,6 @@ const HardwarePage: React.FC<HardwarePageProps> = () => {
         getId: j => j.id,
     });
 
-    // Filter options
     const availableMechanisms     = distinctValues(handleCrud.items, 'mechanism');
     const availableHandleFinishes = distinctValues(handleCrud.items, 'finish');
     const availableHingeFinishes  = distinctValues(hingeCrud.items, 'finish');
@@ -196,7 +195,6 @@ const HardwarePage: React.FC<HardwarePageProps> = () => {
                 </div>
             )}
 
-            {/* Handle Modal */}
             <Modal
                 isOpen={handleCrud.modalOpen}
                 onClose={handleCrud.closeModal}
@@ -226,7 +224,6 @@ const HardwarePage: React.FC<HardwarePageProps> = () => {
                 )}
             </Modal>
 
-            {/* Hinge Modal */}
             <Modal
                 isOpen={hingeCrud.modalOpen}
                 onClose={hingeCrud.closeModal}
@@ -255,7 +252,6 @@ const HardwarePage: React.FC<HardwarePageProps> = () => {
                     </div>
                 )}
             </Modal>
-            {/* Jamb Modal */}
             <Modal
                 isOpen={jambCrud.modalOpen}
                 onClose={jambCrud.closeModal}

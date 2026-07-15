@@ -13,7 +13,9 @@ namespace BusinessApi.Factories
         bool Delete(int id);
         IEnumerable<DoorPricingEntry> GetPrices(int doorTypeId);
         DoorPricingEntry? AddPrice(int doorTypeId, DoorPricingEntry entry);
+        DoorPricingEntry? UpdatePrice(int doorTypeId, int entryId, DoorPricingEntry entry);
         bool DeletePrice(int doorTypeId, int entryId);
+        IEnumerable<DoorPricingEntry>? AddPrices(int doorTypeId, IEnumerable<DoorPricingEntry> entries, bool replace);
     }
 
     public class DoorTypeFactory : IDoorTypeFactory
@@ -56,8 +58,11 @@ namespace BusinessApi.Factories
             existing.Material = doorType.Material;
             existing.ProductRange = doorType.ProductRange;
             existing.SkinThickness = doorType.SkinThickness;
+            existing.Colour = doorType.Colour;
+            existing.LabourCost = doorType.LabourCost;
             existing.Description = doorType.Description;
             existing.Notes = doorType.Notes;
+            existing.IsCavityOnly = doorType.IsCavityOnly;
             existing.IsActive = doorType.IsActive;
             _db.SaveChanges();
             return existing;
@@ -76,6 +81,7 @@ namespace BusinessApi.Factories
             _db.DoorPricingEntries.AsNoTracking()
                .Where(p => p.DoorTypeId == doorTypeId)
                .OrderBy(p => p.Configuration)
+               .ThenBy(p => p.Jamb)
                .ThenBy(p => p.HeightMm)
                .ThenBy(p => p.WidthMm)
                .ThenBy(p => p.ThicknessMm)
@@ -91,6 +97,23 @@ namespace BusinessApi.Factories
             return entry;
         }
 
+        public DoorPricingEntry? UpdatePrice(int doorTypeId, int entryId, DoorPricingEntry entry)
+        {
+            var existing = _db.DoorPricingEntries.FirstOrDefault(p => p.Id == entryId && p.DoorTypeId == doorTypeId);
+            if (existing is null) return null;
+
+            existing.Configuration = entry.Configuration;
+            existing.Jamb = entry.Jamb;
+            existing.PriceFor = entry.PriceFor;
+            existing.HeightMm = entry.HeightMm;
+            existing.WidthMm = entry.WidthMm;
+            existing.ThicknessMm = entry.ThicknessMm;
+            existing.Price = entry.Price;
+            existing.IsPOA = entry.IsPOA;
+            _db.SaveChanges();
+            return existing;
+        }
+
         public bool DeletePrice(int doorTypeId, int entryId)
         {
             var entry = _db.DoorPricingEntries.FirstOrDefault(p => p.Id == entryId && p.DoorTypeId == doorTypeId);
@@ -98,6 +121,28 @@ namespace BusinessApi.Factories
             _db.DoorPricingEntries.Remove(entry);
             _db.SaveChanges();
             return true;
+        }
+
+        public IEnumerable<DoorPricingEntry>? AddPrices(int doorTypeId, IEnumerable<DoorPricingEntry> entries, bool replace)
+        {
+            if (!_db.DoorTypes.Any(d => d.Id == doorTypeId)) return null;
+
+            if (replace)
+            {
+                var existingEntries = _db.DoorPricingEntries.Where(p => p.DoorTypeId == doorTypeId);
+                _db.DoorPricingEntries.RemoveRange(existingEntries);
+            }
+
+            var toAdd = entries.ToList();
+            foreach (var entry in toAdd)
+            {
+                entry.Id = 0;
+                entry.DoorTypeId = doorTypeId;
+                entry.DoorType = null!;
+            }
+            _db.DoorPricingEntries.AddRange(toAdd);
+            _db.SaveChanges();
+            return toAdd;
         }
     }
 }

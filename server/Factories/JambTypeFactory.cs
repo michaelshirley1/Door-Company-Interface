@@ -43,6 +43,13 @@ namespace BusinessApi.Factories
 
             existing.Name = jambType.Name;
             existing.Description = jambType.Description;
+            existing.Supplier = jambType.Supplier;
+            existing.Colour = jambType.Colour;
+            existing.LabourCost = jambType.LabourCost;
+            existing.CostPerMetre = jambType.CostPerMetre;
+            existing.ProfileSize = jambType.ProfileSize;
+            existing.RebateGroove = jambType.RebateGroove;
+            existing.Code = jambType.Code;
             existing.Price = jambType.Price;
             existing.IsActive = jambType.IsActive;
             _db.SaveChanges();

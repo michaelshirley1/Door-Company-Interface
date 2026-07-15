@@ -1,5 +1,5 @@
 import React from 'react';
-import { FilterBarProps, FilterOption, FilterSelectProps } from './model';
+import { FilterBarProps, FilterOption, FilterSelectProps, FilterSearchProps } from './model';
 
 import './style.scss';
 
@@ -22,5 +22,12 @@ export const FilterSelect: React.FC<FilterSelectProps> = ({ label, value, onChan
                 return <option key={o.value} value={o.value}>{o.label}</option>;
             })}
         </select>
+    </div>
+);
+
+export const FilterSearch: React.FC<FilterSearchProps> = ({ label, value, onChange, placeholder }) => (
+    <div className="filter-bar-group">
+        <label>{label}</label>
+        <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
     </div>
 );

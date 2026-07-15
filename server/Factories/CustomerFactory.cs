@@ -9,7 +9,7 @@ namespace BusinessApi.Factories
         IEnumerable<Customer> GetAll();
         Customer? GetById(int id);
         Customer Create(Customer customer);
-        Customer? Update(int id, Customer customer);
+        Customer? Update(int id, Customer customer, bool isAdmin);
         bool Delete(int id);
     }
 
@@ -37,7 +37,7 @@ namespace BusinessApi.Factories
             return customer;
         }
 
-        public Customer? Update(int id, Customer customer)
+        public Customer? Update(int id, Customer customer, bool isAdmin)
         {
             var existing = _db.Customers.FirstOrDefault(c => c.Id == id);
             if (existing is null) return null;
@@ -48,6 +48,7 @@ namespace BusinessApi.Factories
             existing.Phone = customer.Phone;
             existing.Address = customer.Address;
             existing.Notes = customer.Notes;
+            if (isAdmin) existing.MarginPercent = customer.MarginPercent;
             existing.UpdatedAt = DateTime.UtcNow;
             _db.SaveChanges();
             return existing;

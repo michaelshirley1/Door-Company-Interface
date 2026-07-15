@@ -8,5 +8,6 @@ export interface Customer {
     phone: string | null;
     address: string | null;
     notes: string | null;
+    marginPercent: number | null;
     createdAt: string;
 }

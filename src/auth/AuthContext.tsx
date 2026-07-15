@@ -5,12 +5,16 @@ import { supabase } from '../lib/supabase';
 interface AuthContextType {
     session: Session | null;
     loading: boolean;
+    isAdmin: boolean;
+    isOwner: boolean;
     signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
     session: null,
     loading: true,
+    isAdmin: false,
+    isOwner: false,
     signOut: async () => {},
 });
 
@@ -35,8 +39,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut();
     };
 
+    const role = session?.user.app_metadata?.role;
+    const isOwner = role === 'owner';
+    const isAdmin = isOwner || role === 'admin';
+
     return (
-        <AuthContext.Provider value={{ session, loading, signOut }}>
+        <AuthContext.Provider value={{ session, loading, isAdmin, isOwner, signOut }}>
             {children}
         </AuthContext.Provider>
     );

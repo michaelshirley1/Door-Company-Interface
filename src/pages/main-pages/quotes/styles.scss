@@ -2,7 +2,6 @@
 
 }
 
-// Xero "Connect to Xero" button in the workflow actions bar
 .xero-connect-btn {
     display: inline-flex;
     align-items: center;
@@ -20,7 +19,6 @@
     &:hover { background: #0fa0d0; box-shadow: 0 4px 10px rgba(19,181,234,0.3); }
 }
 
-// Xero feedback inside the invoice section
 .xero-integration {
     &__message {
         margin: 8px 0 0;

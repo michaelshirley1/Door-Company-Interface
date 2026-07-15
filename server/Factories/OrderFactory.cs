@@ -1,5 +1,6 @@
 using BusinessApi.Data;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
@@ -11,15 +12,19 @@ namespace BusinessApi.Factories
         PurchaseOrder Create(PurchaseOrder order);
         PurchaseOrder? Update(int id, PurchaseOrder order);
         bool Delete(int id);
+        OrderItem? SetItemDispatched(int orderId, int itemId, bool isDispatched);
+        bool AreAllItemsDispatched(int quoteId);
     }
 
     public class OrderFactory : IOrderFactory
     {
         private readonly AppDbContext _db;
+        private readonly IDocumentNumberService _numberService;
 
-        public OrderFactory(AppDbContext db)
+        public OrderFactory(AppDbContext db, IDocumentNumberService numberService)
         {
             _db = db;
+            _numberService = numberService;
         }
 
         public IEnumerable<PurchaseOrder> GetAll() =>
@@ -35,6 +40,7 @@ namespace BusinessApi.Factories
 
         public PurchaseOrder Create(PurchaseOrder order)
         {
+            order.PoNumber = _numberService.Next("PurchaseOrder", "PO-", 4);
             order.CreatedAt = DateTime.UtcNow;
             order.UpdatedAt = DateTime.UtcNow;
             _db.PurchaseOrders.Add(order);
@@ -47,7 +53,6 @@ namespace BusinessApi.Factories
             var existing = _db.PurchaseOrders.FirstOrDefault(o => o.Id == id);
             if (existing is null) return null;
 
-            existing.PoNumber = order.PoNumber;
             existing.CustomerName = order.CustomerName;
             existing.Status = order.Status;
             existing.JobId = order.JobId;
@@ -69,6 +74,25 @@ namespace BusinessApi.Factories
             _db.PurchaseOrders.Remove(existing);
             _db.SaveChanges();
             return true;
+        }
+
+        public OrderItem? SetItemDispatched(int orderId, int itemId, bool isDispatched)
+        {
+            var order = _db.PurchaseOrders.AsNoTracking().FirstOrDefault(o => o.Id == orderId);
+            if (order is null || order.QuoteId is null) return null;
+
+            var item = _db.OrderItems.FirstOrDefault(i => i.Id == itemId && i.QuoteId == order.QuoteId);
+            if (item is null) return null;
+
+            item.IsDispatched = isDispatched;
+            _db.SaveChanges();
+            return item;
+        }
+
+        public bool AreAllItemsDispatched(int quoteId)
+        {
+            var items = _db.OrderItems.AsNoTracking().Where(i => i.QuoteId == quoteId).ToList();
+            return items.Count == 0 || items.All(i => i.IsDispatched);
         }
     }
 }

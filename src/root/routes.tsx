@@ -17,14 +17,21 @@ import OrderFormPage from '../pages/main-pages/orders/new';
 import InvoiceFormPage from '../pages/main-pages/invoices/new';
 import CustomerFormPage from '../pages/main-pages/customers/new';
 
-import DoorsPage from '../pages/side-pages/doors';
-import CavitySlidersPage from '../pages/side-pages/cavity-sliders';
-import HardwarePage from '../pages/side-pages/hardware';
+import ProductsPage from '../pages/side-pages/products';
+import DoorDetailPage from '../pages/side-pages/doors/detail';
+import SettingsPage from '../pages/main-pages/settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const { session, loading } = useAuth();
     if (loading) return null;
     if (!session) return <Navigate to="/login" replace />;
+    return <>{children}</>;
+}
+
+function OwnerRoute({ children }: { children: React.ReactNode }) {
+    const { isOwner, loading } = useAuth();
+    if (loading) return null;
+    if (!isOwner) return <Navigate to="/" replace />;
     return <>{children}</>;
 }
 
@@ -56,9 +63,11 @@ export default function App() {
                             <Route path="/customers/new" element={<CustomerFormPage />} />
                             <Route path="/customers/:id/edit" element={<CustomerFormPage />} />
 
-                            <Route path="/doors" element={<DoorsPage />} />
-                            <Route path="/cavity-sliders" element={<CavitySlidersPage />} />
-                            <Route path="/hardware" element={<HardwarePage />} />
+                            <Route path="/products" element={<ProductsPage />} />
+                            <Route path="/doors/new" element={<DoorDetailPage />} />
+                            <Route path="/doors/:id" element={<DoorDetailPage />} />
+
+                            <Route path="/settings" element={<OwnerRoute><SettingsPage /></OwnerRoute>} />
                         </Routes>
                     </Layout>
                 </ProtectedRoute>

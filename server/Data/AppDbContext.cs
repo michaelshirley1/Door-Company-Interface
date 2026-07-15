@@ -16,22 +16,25 @@ namespace BusinessApi.Data
         public DbSet<DoorType> DoorTypes => Set<DoorType>();
         public DbSet<DoorPricingEntry> DoorPricingEntries => Set<DoorPricingEntry>();
         public DbSet<JambType> JambTypes => Set<JambType>();
+        public DbSet<JambRequirement> JambRequirements => Set<JambRequirement>();
         public DbSet<HingeType> HingeTypes => Set<HingeType>();
         public DbSet<HandleType> HandleTypes => Set<HandleType>();
         public DbSet<CavitySliderType> CavitySliderTypes => Set<CavitySliderType>();
+        public DbSet<TrackType> TrackTypes => Set<TrackType>();
+        public DbSet<Product> Products => Set<Product>();
+        public DbSet<ProductComponent> ProductComponents => Set<ProductComponent>();
+        public DbSet<DocumentSequence> DocumentSequences => Set<DocumentSequence>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Job → Customer: many-to-one required, OnDelete Restrict
             modelBuilder.Entity<Job>()
                 .HasOne(j => j.Customer)
                 .WithMany(c => c.Jobs)
                 .HasForeignKey(j => j.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Job → PurchaseOrder: one-to-one optional, FK on Job (PurchaseOrderId), no inverse nav
             modelBuilder.Entity<Job>()
                 .HasOne(j => j.PurchaseOrder)
                 .WithOne()
@@ -39,7 +42,6 @@ namespace BusinessApi.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // PurchaseOrder → Job: many-to-one optional via PurchaseOrder.JobId (no nav property)
             modelBuilder.Entity<PurchaseOrder>()
                 .HasOne<Job>()
                 .WithMany()
@@ -47,21 +49,18 @@ namespace BusinessApi.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Quote → Customer: many-to-one required, OnDelete Restrict
             modelBuilder.Entity<Quote>()
                 .HasOne(q => q.Customer)
                 .WithMany(c => c.Quotes)
                 .HasForeignKey(q => q.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // PurchaseOrder → Customer: many-to-one required, OnDelete Restrict
             modelBuilder.Entity<PurchaseOrder>()
                 .HasOne(po => po.Customer)
                 .WithMany(c => c.PurchaseOrders)
                 .HasForeignKey(po => po.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // PurchaseOrder → Quote: many-to-one optional, FK on PurchaseOrder (QuoteId)
             modelBuilder.Entity<PurchaseOrder>()
                 .HasOne(po => po.Quote)
                 .WithMany()
@@ -69,7 +68,6 @@ namespace BusinessApi.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Invoice → Job: many-to-one optional, FK on Invoice (JobId)
             modelBuilder.Entity<Invoice>()
                 .HasOne(i => i.Job)
                 .WithMany()
@@ -77,7 +75,6 @@ namespace BusinessApi.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Invoice → Quote: many-to-one optional, FK on Invoice (QuoteId)
             modelBuilder.Entity<Invoice>()
                 .HasOne(i => i.Quote)
                 .WithMany()
@@ -85,49 +82,77 @@ namespace BusinessApi.Data
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // OrderItem → Job: many-to-one optional
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Job)
                 .WithMany(j => j.Items)
                 .HasForeignKey(oi => oi.JobId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // OrderItem → Quote: many-to-one optional
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Quote)
                 .WithMany(q => q.Items)
                 .HasForeignKey(oi => oi.QuoteId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // OrderItem → DoorType: many-to-one optional
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.DoorType)
                 .WithMany()
                 .HasForeignKey(oi => oi.DoorTypeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // OrderItem → HingeType: many-to-one optional
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.HingeType)
                 .WithMany()
                 .HasForeignKey(oi => oi.HingeTypeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // OrderItem → HandleType: many-to-one optional
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.HandleType)
                 .WithMany()
                 .HasForeignKey(oi => oi.HandleTypeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // DoorPricingEntry → DoorType: many-to-one, cascade delete
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.CavitySliderType)
+                .WithMany()
+                .HasForeignKey(oi => oi.CavitySliderTypeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.TrackTypeRef)
+                .WithMany()
+                .HasForeignKey(oi => oi.TrackTypeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(oi => oi.Product)
+                .WithMany()
+                .HasForeignKey(oi => oi.ProductId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<ProductComponent>()
+                .HasOne(pc => pc.Product)
+                .WithMany(p => p.Components)
+                .HasForeignKey(pc => pc.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<DoorPricingEntry>()
                 .HasOne(p => p.DoorType)
                 .WithMany(d => d.Prices)
                 .HasForeignKey(p => p.DoorTypeId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ── Seed Data ──────────────────────────────────────────────────────────
+            modelBuilder.Entity<DoorPricingEntry>()
+                .HasIndex(p => new { p.DoorTypeId, p.HeightMm, p.WidthMm, p.ThicknessMm })
+                .HasDatabaseName("IX_DoorPricingEntries_Lookup");
+
+            modelBuilder.Entity<DocumentSequence>().HasKey(s => s.Key);
+            modelBuilder.Entity<DocumentSequence>()
+                .Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsRowVersion();
+
 
             modelBuilder.Entity<Customer>().HasData(
                 new Customer
@@ -515,8 +540,8 @@ namespace BusinessApi.Data
                     TaxAmount = 180.65m,
                     Total = 1385.00m,
                     AmountPaid = 0m,
-                    DueDate = "2026-08-28",
-                    IssuedAt = "2026-07-28",
+                    DueDate = new DateOnly(2026, 8, 28),
+                    IssuedAt = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
                     Notes = "Payment due within 30 days.",
                     CreatedAt = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
                     UpdatedAt = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
@@ -536,7 +561,7 @@ namespace BusinessApi.Data
                     TaxAmount = 469.57m,
                     Total = 3600.00m,
                     AmountPaid = 0m,
-                    DueDate = "2026-09-10",
+                    DueDate = new DateOnly(2026, 9, 10),
                     CreatedAt = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
                     UpdatedAt = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
                 },
@@ -555,9 +580,9 @@ namespace BusinessApi.Data
                     TaxAmount = 280.43m,
                     Total = 2150.00m,
                     AmountPaid = 2150.00m,
-                    DueDate = "2026-07-20",
-                    IssuedAt = "2026-07-01",
-                    PaidAt = "2026-07-05",
+                    DueDate = new DateOnly(2026, 7, 20),
+                    IssuedAt = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                    PaidAt = new DateTime(2026, 7, 5, 0, 0, 0, DateTimeKind.Utc),
                     Notes = "Paid in full.",
                     CreatedAt = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
                     UpdatedAt = new DateTime(2026, 7, 5, 0, 0, 0, DateTimeKind.Utc),

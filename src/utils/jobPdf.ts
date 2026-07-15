@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { OrderItem } from '../pages/main-pages/jobs/model';
 import { Quote } from '../pages/main-pages/quotes/model';
+import { PurchaseOrder } from '../pages/main-pages/orders/model';
 import { DoorType } from '../pages/side-pages/door-types/model';
 import { HingeType } from '../pages/side-pages/hinge-types/model';
 import { HandleType } from '../pages/side-pages/handle-types/model';
@@ -16,11 +17,11 @@ export interface PdfDeps {
 function buildDescription(item: OrderItem, deps: PdfDeps): string {
     const lines: string[] = [];
 
-    if (item.itemType === 'Prehung') {
+    if (item.itemType === 'Prehung' || item.itemType === 'DoorLeaf') {
         if (item.doorConfiguration) lines.push(`Config: ${item.doorConfiguration}`);
         const door = deps.doorTypes.find(d => d.id === item.doorTypeId);
         if (door) {
-            const dims = [item.heightMm, item.widthMm].filter(Boolean).join('x');
+            const dims = [item.heightMm, item.widthMm, item.thicknessMm].filter(Boolean).join('x');
             lines.push(`Door: ${door.name}${dims ? ` ${dims}` : ''}`);
         }
         if (item.jam)      lines.push(`Jamb: ${item.jam}`);
@@ -33,18 +34,105 @@ function buildDescription(item: OrderItem, deps: PdfDeps): string {
         if (item.notes)        lines.push(`Notes: ${item.notes}`);
     } else {
         if (item.notes)    lines.push(item.notes);
-        else               lines.push(item.itemType === 'DoorLeaf' ? 'Door Leaf' : item.itemType);
+        else               lines.push(item.itemType);
     }
 
     return lines.join('\n');
 }
 
-const COMPANY_NAME = 'DoorStop';
-const GST_RATE     = 0.15;
+export const COMPANY_NAME = 'DoorStop';
+export const GST_RATE     = 0.15;
 
-const DARK  = [26,  26,  46]  as [number, number, number];
-const LIGHT = [250, 250, 250] as [number, number, number];
-const BORDER= [200, 200, 200] as [number, number, number];
+export const DARK   = [26,  26,  46]  as [number, number, number];
+export const LIGHT  = [250, 250, 250] as [number, number, number];
+export const BORDER = [200, 200, 200] as [number, number, number];
+
+export function drawDocHeader(
+    doc: jsPDF,
+    opts: {
+        docLabel: string;
+        docNumber: string;
+        infoRows: [string, string][];
+        deliveryAddress: string;
+        descriptionLabel?: string;
+    },
+): number {
+    const pw = doc.internal.pageSize.getWidth();
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text(COMPANY_NAME, 14, 20);
+
+    doc.setFontSize(18);
+    doc.text(`${opts.docLabel}: ${opts.docNumber}`, pw - 14, 20, { align: 'right' });
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    const addrLines = ['PO Box 12653', 'Penrose', 'Auckland 1642', 'Phone: 09 000 0000'];
+    addrLines.forEach((line, i) => doc.text(line, 14, 27 + i * 4));
+
+    const rightX = pw - 14;
+    opts.infoRows.forEach(([label, value], i) => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(80, 80, 80);
+        doc.text(label, rightX - 55, 27 + i * 4);
+        doc.setFont('helvetica', 'normal');
+        doc.text(value, rightX, 27 + i * 4, { align: 'right' });
+    });
+
+    const boxY = 48;
+    doc.setDrawColor(...BORDER);
+    doc.rect(pw / 2, boxY, pw / 2 - 14, 14);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    doc.text('Delivery Address:', pw / 2 + 2, boxY + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.text(opts.deliveryAddress, pw / 2 + 2, boxY + 8, { maxWidth: pw / 2 - 18 });
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text(opts.descriptionLabel ?? 'Description:', 14, boxY + 4);
+
+    return 68;
+}
+
+export function drawFooterBar(doc: jsPDF): void {
+    const pw = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    doc.setFillColor(...DARK);
+    doc.rect(0, pageH - 10, pw, 10, 'F');
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Page 1 of 1', pw - 14, pageH - 4, { align: 'right' });
+}
+
+export function drawSignatureBlock(doc: jsPDF, y: number, heading: string): number {
+    const pw = doc.internal.pageSize.getWidth();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    doc.text(heading, 14, y);
+
+    const lineY = y + 14;
+    const colWidth = (pw - 28) / 3;
+    const labels: [string, number][] = [['Name', 0], ['Signature', 1], ['Date', 2]];
+    doc.setDrawColor(...BORDER);
+    labels.forEach(([label, col]) => {
+        const x = 14 + col * colWidth;
+        doc.line(x, lineY, x + colWidth - 10, lineY);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(label, x, lineY + 4);
+    });
+
+    return lineY + 12;
+}
 
 export function generateQuotePdf(quote: Quote, deps: PdfDeps): void {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -58,65 +146,18 @@ export function generateQuotePdf(quote: Quote, deps: PdfDeps): void {
     const today  = new Date().toLocaleDateString('en-NZ');
     const docNum = quote.quoteNumber;
 
-    // ── Header ──────────────────────────────────────────────────────────────
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...DARK);
-    doc.text(COMPANY_NAME, 14, 20);
-
-    doc.setFontSize(18);
-    doc.text(`Estimate: ${docNum}`, pw - 14, 20, { align: 'right' });
-
-    // Company address block
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
-    const addrLines = [
-        'PO Box 12653',
-        'Penrose',
-        'Auckland 1642',
-        'Phone: 09 000 0000',
-    ];
-    addrLines.forEach((line, i) => doc.text(line, 14, 27 + i * 4));
-
-    // Right info block
-    const rightX = pw - 14;
-    const infoRows: [string, string][] = [
-        ['Job-Order:',        quote.jobNumber ? `${quote.jobNumber} - 1` : docNum],
-        ['Date:',             today],
-        ['Estimate To:',      quote.customerName],
-        ['Client Ref:',       quote.createdBy ?? '—'],
-        ['Proposed Dispatch:', '—'],
-    ];
-    infoRows.forEach(([label, value], i) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(80, 80, 80);
-        doc.text(label, rightX - 55, 27 + i * 4);
-        doc.setFont('helvetica', 'normal');
-        doc.text(value, rightX, 27 + i * 4, { align: 'right' });
+    const tableTop = drawDocHeader(doc, {
+        docLabel: 'Estimate',
+        docNumber: docNum,
+        infoRows: [
+            ['Job-Order:',        quote.jobNumber ? `${quote.jobNumber} - 1` : docNum],
+            ['Date:',             today],
+            ['Estimate To:',      quote.customerName],
+            ['Client Ref:',       quote.createdBy ?? '—'],
+            ['Proposed Dispatch:', '—'],
+        ],
+        deliveryAddress: quote.siteAddress ?? quote.notes ?? '—',
     });
-
-    // Delivery address box
-    const boxY = 48;
-    doc.setDrawColor(...BORDER);
-    doc.rect(pw / 2, boxY, pw / 2 - 14, 14);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.setTextColor(80, 80, 80);
-    doc.text('Delivery Address:', pw / 2 + 2, boxY + 4);
-    doc.setFont('helvetica', 'normal');
-    const deliveryAddr = quote.siteAddress ?? quote.notes ?? '—';
-    doc.text(deliveryAddr, pw / 2 + 2, boxY + 8, { maxWidth: pw / 2 - 18 });
-
-    // Description label
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(80, 80, 80);
-    doc.text('Description:', 14, boxY + 4);
-
-    // ── Items table ──────────────────────────────────────────────────────────
-    const tableTop = 68;
 
     autoTable(doc, {
         startY: tableTop,
@@ -135,19 +176,8 @@ export function generateQuotePdf(quote: Quote, deps: PdfDeps): void {
             ];
         }),
         theme: 'plain',
-        styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            valign: 'top',
-            lineColor: BORDER,
-            lineWidth: 0.1,
-        },
-        headStyles: {
-            fillColor: DARK,
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            fontSize: 8,
-        },
+        styles: { fontSize: 8, cellPadding: 3, valign: 'top', lineColor: BORDER, lineWidth: 0.1 },
+        headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
         columnStyles: {
             0: { cellWidth: 8,  halign: 'left' },
             1: { cellWidth: 18 },
@@ -160,7 +190,6 @@ export function generateQuotePdf(quote: Quote, deps: PdfDeps): void {
         margin: { left: 14, right: 14 },
     });
 
-    // ── Totals ───────────────────────────────────────────────────────────────
     const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
     const totalsX = pw - 14;
     const labelX  = totalsX - 50;
@@ -180,8 +209,9 @@ export function generateQuotePdf(quote: Quote, deps: PdfDeps): void {
         doc.text(value, totalsX, y, { align: 'right' });
     });
 
-    // ── Conditions / footer ──────────────────────────────────────────────────
-    const condY = finalY + 26;
+    const sigY = drawSignatureBlock(doc, finalY + 26, 'Quote accepted');
+
+    const condY = sigY + 8;
     doc.setDrawColor(...BORDER);
     doc.line(14, condY - 2, pw - 14, condY - 2);
 
@@ -196,13 +226,54 @@ export function generateQuotePdf(quote: Quote, deps: PdfDeps): void {
     doc.setTextColor(100, 100, 100);
     conditions.forEach((line, i) => doc.text(line, 14, condY + i * 3.5));
 
-    // Page footer bar
-    const pageH = doc.internal.pageSize.getHeight();
-    doc.setFillColor(...DARK);
-    doc.rect(0, pageH - 10, pw, 10, 'F');
-    doc.setFontSize(8);
-    doc.setTextColor(255, 255, 255);
-    doc.text('Page 1 of 1', pw - 14, pageH - 4, { align: 'right' });
+    drawFooterBar(doc);
 
     doc.save(`${docNum}.pdf`);
+}
+
+export function generateDispatchPdf(order: PurchaseOrder, deps: PdfDeps): void {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const items = order.quote?.items ?? [];
+    const today = new Date().toLocaleDateString('en-NZ');
+    const docNum = order.poNumber ?? `PO-${order.id}`;
+
+    const tableTop = drawDocHeader(doc, {
+        docLabel: 'Dispatch Docket',
+        docNumber: docNum,
+        infoRows: [
+            ['Job-Order:',   order.jobNumber ?? docNum],
+            ['Date:',        today],
+            ['Dispatch To:', order.customerName],
+            ['Expected Delivery:', order.expectedDelivery ?? '—'],
+        ],
+        deliveryAddress: order.siteAddress ?? order.siteDescription ?? '—',
+    });
+
+    autoTable(doc, {
+        startY: tableTop,
+        head: [['#', 'Room', 'Description', 'Quantity']],
+        body: items.map((item, i) => [
+            String(i + 1) + '.',
+            item.room ?? '',
+            buildDescription(item, deps),
+            (item.quantity ?? 1).toFixed(3),
+        ]),
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 3, valign: 'top', lineColor: BORDER, lineWidth: 0.1 },
+        headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: {
+            0: { cellWidth: 8,  halign: 'left' },
+            1: { cellWidth: 22 },
+            2: { cellWidth: 'auto' },
+            3: { cellWidth: 24, halign: 'right' },
+        },
+        alternateRowStyles: { fillColor: LIGHT },
+        margin: { left: 14, right: 14 },
+    });
+
+    const finalY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    drawSignatureBlock(doc, finalY, 'Goods received');
+    drawFooterBar(doc);
+
+    doc.save(`${docNum}-dispatch.pdf`);
 }

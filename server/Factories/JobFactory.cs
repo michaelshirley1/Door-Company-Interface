@@ -1,5 +1,6 @@
 using BusinessApi.Data;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
@@ -16,10 +17,12 @@ namespace BusinessApi.Factories
     public class JobFactory : IJobFactory
     {
         private readonly AppDbContext _db;
+        private readonly IDocumentNumberService _numberService;
 
-        public JobFactory(AppDbContext db)
+        public JobFactory(AppDbContext db, IDocumentNumberService numberService)
         {
             _db = db;
+            _numberService = numberService;
         }
 
         public IEnumerable<Job> GetAll() =>
@@ -34,6 +37,7 @@ namespace BusinessApi.Factories
 
         public Job Create(Job job)
         {
+            job.JobNumber = _numberService.Next("Job", "JOB-", 4);
             job.CreatedAt = DateTime.UtcNow;
             job.UpdatedAt = DateTime.UtcNow;
             foreach (var item in job.Items)
@@ -50,7 +54,6 @@ namespace BusinessApi.Factories
                 .FirstOrDefault(j => j.Id == id);
             if (existing is null) return null;
 
-            existing.JobNumber = job.JobNumber;
             existing.CustomerId = job.CustomerId;
             existing.CustomerName = job.CustomerName;
             existing.PurchaseOrderId = job.PurchaseOrderId;
@@ -63,11 +66,9 @@ namespace BusinessApi.Factories
             existing.Notes = job.Notes;
             existing.UpdatedAt = DateTime.UtcNow;
 
-            // Remove old items individually (avoids SetNull/Deleted state conflict)
             foreach (var old in existing.Items.ToList())
                 _db.Remove(old);
 
-            // Add incoming items directly to DbSet (bypasses navigation collection)
             foreach (var item in job.Items ?? [])
             {
                 item.Id = 0;

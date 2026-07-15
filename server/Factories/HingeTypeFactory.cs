@@ -45,6 +45,10 @@ namespace BusinessApi.Factories
             existing.Finish = hingeType.Finish;
             existing.SizeMm = hingeType.SizeMm;
             existing.Description = hingeType.Description;
+            existing.Supplier = hingeType.Supplier;
+            existing.Colour = hingeType.Colour;
+            existing.LabourCost = hingeType.LabourCost;
+            existing.Price = hingeType.Price;
             existing.IsActive = hingeType.IsActive;
             _db.SaveChanges();
             return existing;

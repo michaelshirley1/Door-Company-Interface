@@ -1,0 +1,82 @@
+.hw-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e4e7ec;
+}
+
+.hw-tab {
+    padding: 9px 20px;
+    border: none;
+    background: none;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #9ca3af;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+    font-family: inherit;
+    letter-spacing: 0.1px;
+
+    &:hover {
+        color: #374151;
+    }
+
+    &.active {
+        color: #1a1a2e;
+        border-bottom-color: #1a1a2e;
+    }
+}
+
+.hw-section {}
+
+.hw-tab-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.hw-empty {
+    color: #9ca3af;
+    padding: 40px 0;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.cs-poa {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.door-component-draft {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+
+    select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+.total-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+
+    .total-row-label {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .total-row-amount {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1a1a2e;
+    }
+}

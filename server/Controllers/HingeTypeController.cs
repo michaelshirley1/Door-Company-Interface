@@ -1,5 +1,6 @@
 using BusinessApi.Factories;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +12,12 @@ namespace BusinessApi.Controllers;
 public class HingeTypeController : ControllerBase
 {
     private readonly IHingeTypeFactory _hingeTypeFactory;
+    private readonly ICurrentUserService _currentUser;
 
-    public HingeTypeController(IHingeTypeFactory hingeTypeFactory)
+    public HingeTypeController(IHingeTypeFactory hingeTypeFactory, ICurrentUserService currentUser)
     {
         _hingeTypeFactory = hingeTypeFactory;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -35,26 +38,32 @@ public class HingeTypeController : ControllerBase
 
     [HttpPost]
     [ProducesResponseType(typeof(HingeType), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public IActionResult Create([FromBody] HingeType hingeType)
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         var created = _hingeTypeFactory.Create(hingeType);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(HingeType), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Update(int id, [FromBody] HingeType hingeType)
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         var updated = _hingeTypeFactory.Update(id, hingeType);
         return updated is null ? NotFound($"HingeType {id} not found.") : Ok(updated);
     }
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         return _hingeTypeFactory.Delete(id) ? NoContent() : NotFound($"HingeType {id} not found.");
     }
 }

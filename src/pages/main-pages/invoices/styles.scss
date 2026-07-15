@@ -1,1 +1,32 @@
+.xero-connect-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 36px;
+    background: #13B5EA;
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.84rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    &:hover { background: #0fa0d0; box-shadow: 0 4px 10px rgba(19,181,234,0.3); }
+}
 
+.xero-disconnect-link {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 0.78rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0 4px;
+}
+
+.xero-message {
+    font-size: 0.82rem;
+    color: #374151;
+    align-self: center;
+}

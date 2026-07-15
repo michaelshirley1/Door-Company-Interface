@@ -57,6 +57,8 @@ namespace BusinessApi.Factories
             existing.UnitType = cavitySliderType.UnitType;
             existing.StudPocket = cavitySliderType.StudPocket;
             existing.FinishDetail = cavitySliderType.FinishDetail;
+            existing.Colour = cavitySliderType.Colour;
+            existing.LabourCost = cavitySliderType.LabourCost;
             existing.HeightMm = cavitySliderType.HeightMm;
             existing.WidthRange = cavitySliderType.WidthRange;
             existing.IsPOA = cavitySliderType.IsPOA;

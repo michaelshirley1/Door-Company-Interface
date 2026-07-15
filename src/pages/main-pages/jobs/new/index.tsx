@@ -5,7 +5,7 @@ import { FormField, TextField, SelectField, TextAreaField } from '../../../../co
 import { Table } from '../../../../components/table';
 import Loading from '../../../../components/loading';
 import { Job } from '../model';
-import { getJob, createJob, updateJob, deleteJob, getJobs } from '../api';
+import { getJob, createJob, updateJob, deleteJob } from '../api';
 import { Customer } from '../../customers/model';
 import { getCustomers } from '../../customers/api';
 import { Quote } from '../../quotes/model';
@@ -19,10 +19,12 @@ import Button from '../../../../components/button';
 import ReadOnlyField from '../../../../components/read-only-field';
 import { formatCurrency, todayISO } from '../../../../shared/format';
 import { getApiErrorMessage } from '../../../../api/errors';
+import { useAuth } from '../../../../auth/AuthContext';
 import '../../../../components/loading/styles.scss';
 
 const JobFormPage: React.FC = () => {
     const navigate = useNavigate();
+    const { isAdmin } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [existing, setExisting] = useState<Job | undefined>();
     const [jobQuotes, setJobQuotes] = useState<Quote[]>([]);
@@ -76,15 +78,7 @@ const JobFormPage: React.FC = () => {
                     if (job.notes) setAddNote(true);
                 }),
               ]
-            : [
-                getJobs().then(jobs => {
-                    const max = jobs.reduce((acc, j) => {
-                        const n = parseInt((j.jobNumber ?? '').replace(/\D/g, '')) || 0;
-                        return n > acc ? n : acc;
-                    }, 0);
-                    setForm(prev => ({ ...prev, jobNumber: `JOB-${String(max + 1).padStart(3, '0')}` }));
-                }),
-              ];
+            : [];
 
         Promise.all([...lookups, ...specific])
             .catch(() => setError('Failed to load data. Check your connection and try again.'))
@@ -184,9 +178,8 @@ const JobFormPage: React.FC = () => {
         }
 
         try {
-            const quoteCount = jobQuotes.length + 1;
             const quote = await createQuote({
-                quoteNumber:  `QTE-${job.jobNumber ?? job.id}-${quoteCount}`,
+                quoteNumber:  '', 
                 customerId:   job.customerId,
                 customerName: job.customerName,
                 status:       'Draft',
@@ -219,12 +212,12 @@ const JobFormPage: React.FC = () => {
             title={existing ? `Job ${existing.jobNumber ?? existing.id}` : 'New Job'}
             onSubmit={handleSubmit}
             onCancel={() => navigate('/jobs')}
-            onDelete={existing ? handleDelete : undefined}
+            onDelete={existing && isAdmin ? handleDelete : undefined}
             error={error}
             submitting={saving}
         >
             <div className="form-row">
-                <ReadOnlyField label="Job Number" value={form.jobNumber} />
+                <ReadOnlyField label="Job Number" value={form.jobNumber || 'Assigned on save'} />
                 <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
                     <option value="Scheduled">Scheduled</option>
                     <option value="InProgress">In Progress</option>

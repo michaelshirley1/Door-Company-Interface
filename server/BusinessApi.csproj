@@ -8,6 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- tools/ and BusinessApi.Tests/ hold standalone projects (their own .csproj) — exclude their
+         sources here so the Web SDK's default recursive glob doesn't also compile them into this project. -->
+    <Compile Remove="tools/**/*.cs" />
+    <Content Remove="tools/**/*" />
+    <Compile Remove="BusinessApi.Tests/**/*.cs" />
+    <Content Remove="BusinessApi.Tests/**/*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.4" />

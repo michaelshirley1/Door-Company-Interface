@@ -7,9 +7,12 @@ import { Customer } from '../model';
 import { getCustomer, createCustomer, updateCustomer, deleteCustomer } from '../api';
 import { todayISO } from '../../../../shared/format';
 import { getApiErrorMessage } from '../../../../api/errors';
+import { DEFAULT_MARGIN_PERCENT } from '../../../../shared/constants';
+import { useAuth } from '../../../../auth/AuthContext';
 
 const CustomerFormPage: React.FC = () => {
     const navigate = useNavigate();
+    const { isAdmin } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [existing, setExisting] = useState<Customer | undefined>();
     const [loading, setLoading] = useState(!!id);
@@ -23,6 +26,7 @@ const CustomerFormPage: React.FC = () => {
         phone:       '',
         address:     '',
         notes:       '',
+        marginPercent: '',
     });
 
     useEffect(() => {
@@ -37,6 +41,7 @@ const CustomerFormPage: React.FC = () => {
                     phone:       customer.phone       ?? '',
                     address:     customer.address     ?? '',
                     notes:       customer.notes       ?? '',
+                    marginPercent: customer.marginPercent?.toString() ?? '',
                 });
             })
             .catch(() => setError('Failed to load customer.'))
@@ -64,6 +69,7 @@ const CustomerFormPage: React.FC = () => {
             phone:       form.phone       || null,
             address:     form.address     || null,
             notes:       form.notes       || null,
+            marginPercent: form.marginPercent ? parseFloat(form.marginPercent) : null,
             createdAt:   existing?.createdAt ?? todayISO(),
         };
         const action = existing
@@ -90,7 +96,7 @@ const CustomerFormPage: React.FC = () => {
             title={existing ? `Edit ${existing.name}` : 'New Customer'}
             onSubmit={handleSubmit}
             onCancel={() => navigate('/customers')}
-            onDelete={existing ? handleDelete : undefined}
+            onDelete={existing && isAdmin ? handleDelete : undefined}
             error={error}
             submitting={saving}
         >
@@ -103,6 +109,9 @@ const CustomerFormPage: React.FC = () => {
                 <TextField label="Phone" name="phone" value={form.phone} onChange={handleChange} placeholder="021 000 0000" />
             </div>
             <TextField label="Address" name="address" value={form.address} onChange={handleChange} placeholder="123 Street, City" />
+            {isAdmin && (
+                <TextField label="Default Margin %" type="number" name="marginPercent" value={form.marginPercent} onChange={handleChange} placeholder={`${DEFAULT_MARGIN_PERCENT} (default)`} />
+            )}
             <TextAreaField label="Notes" name="notes" value={form.notes} onChange={handleChange} />
         </FormWrapper>
     );

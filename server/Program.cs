@@ -1,15 +1,17 @@
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using BusinessApi.Data;
 using BusinessApi.Factories;
 using BusinessApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS — reads CORS_ORIGINS env var (comma-separated), falls back to localhost
 var corsOrigins = (Environment.GetEnvironmentVariable("CORS_ORIGINS") ?? "http://localhost:5173,https://localhost:5173")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -21,13 +23,12 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader());
 });
 
-// Database — reads DATABASE_URL env var (postgresql://user:pass@host:port/db), falls back to config
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string? connectionString;
 if (databaseUrl is not null)
 {
     var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':', 2); // limit to 2 — passwords can contain ':'
+    var userInfo = uri.UserInfo.Split(':', 2);
     var username = Uri.UnescapeDataString(userInfo[0]);
     var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
     var port = uri.Port > 0 ? uri.Port : 5432;
@@ -44,7 +45,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers(options =>
 {
-    // Prevent ASP.NET Core from treating non-nullable EF navigation properties as [Required]
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 })
     .AddJsonOptions(options =>
@@ -64,7 +64,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Auth — validates Supabase JWTs via JWKS (supports ES256/RS256 asymmetric keys)
 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL")
     ?? builder.Configuration["Supabase:Url"];
 
@@ -82,17 +81,37 @@ if (supabaseUrl is not null)
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(5),
             };
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = context =>
+                {
+                    var appMetadata = context.Principal?.FindFirst("app_metadata")?.Value;
+                    if (appMetadata is not null && context.Principal?.Identity is ClaimsIdentity identity)
+                    {
+                        using var doc = JsonDocument.Parse(appMetadata);
+                        if (doc.RootElement.TryGetProperty("role", out var roleEl) && roleEl.ValueKind == JsonValueKind.String)
+                            identity.AddClaim(new Claim(ClaimTypes.Role, roleEl.GetString()!));
+                    }
+                    return Task.CompletedTask;
+                },
+            };
         });
 }
 else
 {
-    builder.Services.AddAuthorizationBuilder().SetFallbackPolicy(null);
+    builder.Services.AddAuthorizationBuilder()
+        .SetFallbackPolicy(null)
+        .SetDefaultPolicy(new AuthorizationPolicyBuilder().RequireAssertion(_ => true).Build());
 }
 
-// Xero integration — reads config from Xero:ClientId/ClientSecret/RedirectUri/FrontendUrl
-// or env vars XERO_CLIENT_ID / XERO_CLIENT_SECRET / XERO_REDIRECT_URI / XERO_FRONTEND_URL
+builder.Services.AddSingleton<ICurrentUserService>(new CurrentUserService(supabaseUrl is not null));
+builder.Services.AddScoped<IDocumentNumberService, DocumentNumberService>();
+
 builder.Services.AddHttpClient("xero");
 builder.Services.AddSingleton<IXeroService, XeroService>();
+
+builder.Services.AddHttpClient("supabase-admin");
+builder.Services.AddScoped<ISupabaseAdminService, SupabaseAdminService>();
 
 builder.Services.AddScoped<ICustomerFactory,    CustomerFactory>();
 builder.Services.AddScoped<IJobFactory,         JobFactory>();
@@ -101,13 +120,15 @@ builder.Services.AddScoped<IOrderFactory,       OrderFactory>();
 builder.Services.AddScoped<IQuoteFactory,       QuoteFactory>();
 builder.Services.AddScoped<IDoorTypeFactory,         DoorTypeFactory>();
 builder.Services.AddScoped<IJambTypeFactory,         JambTypeFactory>();
+builder.Services.AddScoped<IJambRequirementFactory,  JambRequirementFactory>();
 builder.Services.AddScoped<IHandleTypeFactory,       HandleTypeFactory>();
 builder.Services.AddScoped<IHingeTypeFactory,        HingeTypeFactory>();
 builder.Services.AddScoped<ICavitySliderTypeFactory, CavitySliderTypeFactory>();
+builder.Services.AddScoped<ITrackTypeFactory,        TrackTypeFactory>();
+builder.Services.AddScoped<IProductFactory,          ProductFactory>();
 
 var app = builder.Build();
 
-// Run EnsureCreated on startup to create schema + seed data
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -120,12 +141,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Business API v1"));
 }
 
-// Only redirect to HTTPS locally — Render handles HTTPS at the load balancer
 if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 
-// Ensure CORS headers are present even when the server returns a 500.
-// Without this, browsers show a CORS error that masks the real problem.
 app.UseExceptionHandler(err => err.Run(async ctx =>
 {
     var origin = ctx.Request.Headers.Origin.FirstOrDefault();

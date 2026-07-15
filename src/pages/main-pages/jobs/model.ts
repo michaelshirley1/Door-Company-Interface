@@ -23,6 +23,11 @@ export interface OrderItem {
   doorTypeId?: number | null;
   hingeTypeId?: number | null;
   handleTypeId?: number | null;
+  cavitySliderTypeId?: number | null;
+  trackTypeId?: number | null;
+  productId?: number | null;
+  hingeCount?: number | null;
+  isDispatched?: boolean;
   room?: string | null;
   assembly?: string | null;
   doorConfiguration?: string | null;
@@ -41,6 +46,7 @@ export interface OrderItem {
   reveal?: string | null;
   quantity: number | null;
   unitPrice?: number | null;
+  marginPercent?: number | null;
   notes?: string | null;
   sortOrder: number | null;
   createdAt: Date | null;

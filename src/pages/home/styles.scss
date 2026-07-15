@@ -7,17 +7,17 @@
     width: 100%;
     overflow-x: hidden;
 
-    .summary-cards {
+    .kpi-row {
         display: flex;
         gap: 16px;
         width: 100%;
         flex-wrap: wrap;
     }
 
-    .summary-card {
+    .kpi-card {
         display: flex;
         flex-direction: column;
-        padding: 22px 24px;
+        padding: 20px 22px;
         border-radius: 14px;
         background: #fff;
         border: 1px solid #e4e7ec;
@@ -25,6 +25,8 @@
         cursor: pointer;
         transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
         flex-grow: 1;
+        flex-basis: 180px;
+        min-width: 0;
 
         &:hover {
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -32,8 +34,8 @@
             border-color: #c5cbd5;
         }
 
-        .summary-card-label {
-            font-size: 0.72rem;
+        &-label {
+            font-size: 0.7rem;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.6px;
@@ -41,19 +43,37 @@
             margin-bottom: 10px;
         }
 
-        .summary-card-value {
-            font-size: 2.1rem;
+        &-value {
+            font-size: 1.9rem;
             font-weight: 800;
             color: #1a1a2e;
             letter-spacing: -1px;
             line-height: 1;
+        }
+
+        &-delta {
+            margin-top: 8px;
+            font-size: 0.74rem;
+            font-weight: 700;
+
+            &.up { color: #0ca30c; }
+            &.down { color: #d03b3b; }
+        }
+
+        &-subtitle {
+            margin-top: 8px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: #9ca3af;
+
+            &.critical { color: #d03b3b; }
         }
     }
 
     @media (max-width: 768px) {
         padding: 16px;
 
-        .summary-card {
+        .kpi-card {
             min-width: calc(50% - 8px);
             flex: 1 1 calc(50% - 8px);
         }
@@ -91,94 +111,5 @@
         @media (max-width: 768px) {
             grid-template-columns: 1fr;
         }
-    }
-
-    .active-jobs, .active-invoices {
-        border: 0px;
-        border-radius: 12px;
-        box-shadow: 0;
-    }
-}
-
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-
-    &.in-progress {
-        background: #e3f2fd;
-        color: #1565c0;
-        border: 1px solid #bbdefb;
-    }
-
-    &.pending {
-        background: #fff3e0;
-        color: #e65100;
-        border: 1px solid #ffe0b2;
-    }
-
-    &.unpaid {
-        background: #fce4ec;
-        color: #c62828;
-        border: 1px solid #ffcdd2;
-    }
-
-    &.overdue {
-        background: #ffebee;
-        color: #b71c1c;
-        border: 1px solid #ffcdd2;
-    }
-
-    &.paid {
-        background: #e8f5e9;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
-    }
-
-    &.completed {
-        background: #e8f5e9;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
-    }
-
-    &.draft {
-        background: #f4f5f7;
-        color: #6b7280;
-        border: 1px solid #e4e7ec;
-    }
-
-    &.sent {
-        background: #e3f2fd;
-        color: #1565c0;
-        border: 1px solid #bbdefb;
-    }
-
-    &.accepted {
-        background: #e8f5e9;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
-    }
-
-    &.declined {
-        background: #fce4ec;
-        color: #c62828;
-        border: 1px solid #ffcdd2;
-    }
-
-    &.ordered {
-        background: #e3f2fd;
-        color: #1565c0;
-        border: 1px solid #bbdefb;
-    }
-
-    &.received {
-        background: #e8f5e9;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
     }
 }

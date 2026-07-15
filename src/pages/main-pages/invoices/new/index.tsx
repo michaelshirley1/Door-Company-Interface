@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { FormWrapper } from '../../../../components/form-wrapper';
 import { TextField, SelectField, TextAreaField } from '../../../../components/form-field';
+import Button from '../../../../components/button';
 import Loading from '../../../../components/loading';
 import { Invoice } from '../model';
 import { getInvoice, createInvoice, updateInvoice, deleteInvoice } from '../api';
@@ -10,6 +11,10 @@ import { getJobs } from '../../jobs/api';
 import ReadOnlyField from '../../../../components/read-only-field';
 import { formatCurrency } from '../../../../shared/format';
 import { getApiErrorMessage } from '../../../../api/errors';
+import { XeroStatus, disconnectXero, getXeroConnectUrl, getXeroStatus, pushInvoiceToXero } from '../../../../api/xero';
+import { useAuth } from '../../../../auth/AuthContext';
+
+import '../styles.scss';
 
 interface QuoteConversionState {
     fromQuote?: {
@@ -24,6 +29,7 @@ interface QuoteConversionState {
 const InvoiceFormPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { isAdmin } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [existing, setExisting] = useState<Invoice | undefined>();
     const [jobs, setJobs] = useState<Job[]>([]);
@@ -31,6 +37,9 @@ const InvoiceFormPage: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [xeroStatus, setXeroStatus] = useState<XeroStatus | null>(null);
+    const [xeroPushing, setXeroPushing] = useState(false);
+    const [xeroMessage, setXeroMessage] = useState<string | null>(null);
     const [form, setForm] = useState({
         invoiceNumber: '',
         jobId:         '',
@@ -55,7 +64,6 @@ const InvoiceFormPage: React.FC = () => {
                 ...prev,
                 quoteId:       q.quoteId.toString(),
                 quoteNumber:   q.quoteNumber,
-                invoiceNumber: `INV-${q.quoteNumber.replace(/^QTE-/, '')}`,
                 subtotal:      q.subtotal.toFixed(2),
                 notes:         q.notes ?? '',
             }));
@@ -87,6 +95,12 @@ const InvoiceFormPage: React.FC = () => {
             .finally(() => setLoading(false));
     }, [id, location.state]);
 
+    useEffect(() => {
+        if (existing) {
+            getXeroStatus().then(setXeroStatus).catch(() => {});
+        }
+    }, [existing?.id]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
@@ -104,14 +118,11 @@ const InvoiceFormPage: React.FC = () => {
     const total = Math.round((subtotal + taxAmount) * 100) / 100;
 
     const handleSubmit = () => {
-        const newErrors: Record<string, string> = {};
-        if (!form.invoiceNumber.trim()) newErrors.invoiceNumber = 'Invoice number is required';
-        if (Object.keys(newErrors).length > 0) { setFieldErrors(newErrors); return; }
         setFieldErrors({});
         setError(null);
         setSaving(true);
         const data = {
-            invoiceNumber: form.invoiceNumber,
+            invoiceNumber: form.invoiceNumber, 
             jobId:         parseInt(form.jobId) || null,
             jobNumber:     form.jobNumber || null,
             quoteId:       parseInt(form.quoteId) || null,
@@ -145,6 +156,46 @@ const InvoiceFormPage: React.FC = () => {
             .catch((err) => setError(`Failed to delete invoice: ${getApiErrorMessage(err)}`));
     };
 
+    const handlePushToXero = async () => {
+        if (!existing?.quoteId) return;
+        setXeroPushing(true);
+        setXeroMessage(null);
+        try {
+            const result = await pushInvoiceToXero(existing.quoteId);
+            setXeroMessage(`Sent to Xero — Invoice ${result.invoiceNumber ?? result.invoiceId}`);
+        } catch {
+            setXeroMessage('Failed to push to Xero. Please try again.');
+        } finally {
+            setXeroPushing(false);
+        }
+    };
+
+    const handleXeroDisconnect = () => {
+        disconnectXero().then(() => setXeroStatus({ connected: false, tenantName: null }));
+    };
+
+    const xeroButton = existing?.quoteId ? (
+        <>
+            {xeroStatus?.connected ? (
+                <>
+                    <Button variant="secondary" onClick={handlePushToXero} loading={xeroPushing} disabled={xeroPushing || saving}>
+                        Export to Xero
+                    </Button>
+                    {isAdmin && (
+                        <button type="button" className="xero-disconnect-link" onClick={handleXeroDisconnect} title="Disconnect Xero">
+                            Disconnect
+                        </button>
+                    )}
+                </>
+            ) : isAdmin ? (
+                <a className="xero-connect-btn" href={getXeroConnectUrl()}>
+                    Connect to Xero
+                </a>
+            ) : null}
+            {xeroMessage && <span className="xero-message">{xeroMessage}</span>}
+        </>
+    ) : null;
+
     if (loading) return <Loading />;
 
     return (
@@ -152,12 +203,13 @@ const InvoiceFormPage: React.FC = () => {
             title={existing ? `Edit ${existing.invoiceNumber}` : 'New Invoice'}
             onSubmit={handleSubmit}
             onCancel={() => navigate('/invoices')}
-            onDelete={existing ? handleDelete : undefined}
+            onDelete={existing && isAdmin ? handleDelete : undefined}
+            extraActions={xeroButton}
             error={error}
             submitting={saving}
         >
             <div className="form-row">
-                <TextField label="Invoice Number" error={fieldErrors.invoiceNumber} name="invoiceNumber" value={form.invoiceNumber} onChange={handleChange} placeholder="INV-006" />
+                <ReadOnlyField label="Invoice Number" value={form.invoiceNumber || 'Assigned on save'} />
                 <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
                     <option value="Draft">Draft</option>
                     <option value="Sent">Sent</option>

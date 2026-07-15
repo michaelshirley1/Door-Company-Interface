@@ -19,7 +19,7 @@
         color: #6b7280;
     }
 
-    select {
+    select, input {
         padding: 8px 11px;
         border: 1px solid #dde1e7;
         border-radius: 8px;
@@ -29,6 +29,7 @@
         color: #0f0e17;
         font-family: inherit;
         transition: border-color 0.15s, box-shadow 0.15s;
+        box-sizing: border-box;
 
         &:focus {
             outline: none;

@@ -1,9 +1,5 @@
 import client from './client';
 
-/**
- * Builds the standard five CRUD functions for a backend resource.
- * `resource` is the base route without leading slash, e.g. 'job' or 'cavity-slider'.
- */
 export function makeCrudApi<T>(resource: string) {
     return {
         getAll: () =>

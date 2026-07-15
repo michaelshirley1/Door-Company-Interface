@@ -1,5 +1,6 @@
 using BusinessApi.Factories;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +12,12 @@ namespace BusinessApi.Controllers;
 public class JobController : ControllerBase
 {
     private readonly IJobFactory _jobFactory;
+    private readonly ICurrentUserService _currentUser;
 
-    public JobController(IJobFactory jobFactory)
+    public JobController(IJobFactory jobFactory, ICurrentUserService currentUser)
     {
         _jobFactory = jobFactory;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -52,9 +55,11 @@ public class JobController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         return _jobFactory.Delete(id) ? NoContent() : NotFound($"Job {id} not found.");
     }
 }

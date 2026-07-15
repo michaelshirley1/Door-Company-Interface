@@ -1,5 +1,6 @@
 using BusinessApi.Data;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessApi.Factories
@@ -8,18 +9,20 @@ namespace BusinessApi.Factories
     {
         IEnumerable<Quote> GetAll();
         Quote? GetById(int id);
-        Quote Create(Quote quote);
-        Quote? Update(int id, Quote quote);
+        Quote Create(Quote quote, bool isAdmin);
+        Quote? Update(int id, Quote quote, bool isAdmin);
         bool Delete(int id);
     }
 
     public class QuoteFactory : IQuoteFactory
     {
         private readonly AppDbContext _db;
+        private readonly IDocumentNumberService _numberService;
 
-        public QuoteFactory(AppDbContext db)
+        public QuoteFactory(AppDbContext db, IDocumentNumberService numberService)
         {
             _db = db;
+            _numberService = numberService;
         }
 
         public IEnumerable<Quote> GetAll() =>
@@ -28,8 +31,9 @@ namespace BusinessApi.Factories
         public Quote? GetById(int id) =>
             _db.Quotes.Include(q => q.Items).FirstOrDefault(q => q.Id == id);
 
-        public Quote Create(Quote quote)
+        public Quote Create(Quote quote, bool isAdmin)
         {
+            quote.QuoteNumber = _numberService.Next("Quote", "QTE-", 4);
             quote.CreatedAt = DateTime.UtcNow;
             quote.UpdatedAt = DateTime.UtcNow;
             foreach (var item in quote.Items)
@@ -37,18 +41,18 @@ namespace BusinessApi.Factories
                 item.Id = 0;
                 item.JobId = null;
                 item.CreatedAt = DateTime.UtcNow;
+                if (!isAdmin) item.MarginPercent = null;
             }
             _db.Quotes.Add(quote);
             _db.SaveChanges();
             return quote;
         }
 
-        public Quote? Update(int id, Quote quote)
+        public Quote? Update(int id, Quote quote, bool isAdmin)
         {
             var existing = _db.Quotes.Include(q => q.Items).FirstOrDefault(q => q.Id == id);
             if (existing is null) return null;
 
-            existing.QuoteNumber = quote.QuoteNumber;
             existing.CustomerId = quote.CustomerId;
             existing.CustomerName = quote.CustomerName;
             existing.Status = quote.Status;
@@ -71,6 +75,7 @@ namespace BusinessApi.Factories
                 item.QuoteId = id;
                 item.JobId = null;
                 item.CreatedAt = DateTime.UtcNow;
+                if (!isAdmin) item.MarginPercent = null;
                 _db.OrderItems.Add(item);
             }
 

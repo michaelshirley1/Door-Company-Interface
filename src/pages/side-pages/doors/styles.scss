@@ -20,6 +20,8 @@
     border: 1px solid #e4e7ec;
     border-radius: 8px;
     overflow: hidden;
+    max-height: 250px;
+    overflow-y: scroll;
 
     th {
         padding: 7px 10px;
@@ -67,6 +69,24 @@
 .doors-poa {
     font-weight: 600;
     color: #6b7280;
+}
+
+.import-file-label {
+    display: inline-flex;
+    align-items: center;
+}
+
+.poa-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 4px;
+
+    input {
+        width: auto !important;
+    }
 }
 
 .doors-badge {

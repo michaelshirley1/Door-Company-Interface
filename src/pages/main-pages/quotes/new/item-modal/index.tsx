@@ -1,28 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import Modal from '../../../../../components/modal';
 import { FormField, TextField, SelectField, TextAreaField } from '../../../../../components/form-field';
-import { blankItemForm, lookupDoorPrice, activeOnly, buildOrderItem, itemToForm } from '../../../../../shared/item-utils';
+import { blankItemForm, priceQuoteItem, priceQuoteItemBreakdown, activeOnly, buildOrderItem, itemToForm } from '../../../../../shared/item-utils';
+import { STANDARD_WIDTHS, DOOR_CONFIGS, CAVITY_CONFIGS, HINGED_CONFIGS, SLIDER_TRACK_CONFIGS, hingeCountForHeight, isCavityDoorType } from '../../../../../shared/constants';
+import { productTotalCost } from '../../../../../shared/product-utils';
+import { useAuth } from '../../../../../auth/AuthContext';
 import { QuoteItemModalProps } from './model';
 
 const STANDARD_HEIGHTS = ['1980', '2200', '2400'];
-const STANDARD_WIDTHS  = [360, 410, 460, 560, 610, 660, 710, 760, 810, 860, 910, 960, 1010, 1060];
-const DOOR_CONFIGS = ['Single', 'Pair', '2 Slide', '3 Slide', '4 Slide', 'Single Cavity', 'Biparting Cavity', '2 Door Bifold', '4 Door Bifold', 'Exterior Single', 'Exterior Pair'];
 
 const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
-    isOpen, sortOrder, doorTypes, hingeTypes: _hingeTypes, handleTypes, jambTypes,
+    isOpen, sortOrder, doorTypes, hingeTypes, handleTypes, jambTypes, jambRequirements,
+    cavitySliderTypes, trackTypes, products, defaultMarginPercent,
     editIndex, initialItem, onAdd, onClose,
 }) => {
+    const { isAdmin } = useAuth();
     const [itemForm, setItemForm] = useState(blankItemForm());
+    const [productPickerId, setProductPickerId] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             const jambNames = jambTypes.map(j => j.name);
-            setItemForm(initialItem ? itemToForm(initialItem, jambNames) : blankItemForm());
+            const form = initialItem ? itemToForm(initialItem, jambNames) : blankItemForm();
+            setItemForm({ ...form, marginPercent: form.marginPercent || defaultMarginPercent.toString() });
+            setProductPickerId('');
         }
-    }, [isOpen, initialItem, jambTypes]);
+    }, [isOpen, initialItem, jambTypes, defaultMarginPercent]);
 
     const handleClose = () => {
         setItemForm(blankItemForm());
+        setProductPickerId('');
         onClose();
     };
 
@@ -32,29 +39,57 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
     const handleItemTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) =>
         setItemForm({ ...blankItemForm(), itemType: e.target.value as typeof itemForm.itemType });
 
-    const recalcPrice = (form: typeof itemForm) => {
-        return lookupDoorPrice(
-            doorTypes,
-            form.doorTypeId,
-            form.heightMm,
-            form.widthMm,
-            form.doorConfiguration,
-            handleTypes,
-            form.handleTypeId,
-            jambTypes,
-            form.jam,
-            form.itemType,
-            form.thicknessMm,
-        );
-    };
+    const priceArgs = (form: typeof itemForm) => ({
+        doorTypes,
+        doorTypeId: form.doorTypeId,
+        heightMm: form.heightMm,
+        widthMm: form.widthMm,
+        thicknessMm: form.thicknessMm,
+        configuration: form.doorConfiguration,
+        itemType: form.itemType,
+        handleTypes,
+        handleTypeId: form.handleTypeId,
+        jambTypes,
+        jamId: form.jam,
+        jambRequirements,
+        cavitySliderTypes,
+        cavitySliderTypeId: form.cavitySliderTypeId,
+        hingeTypes,
+        hingeTypeId: form.hingeTypeId,
+        hingeCount: form.hingeCount,
+        trackTypes,
+        trackTypeId: form.trackTypeId,
+        marginPercent: form.marginPercent !== '' ? parseFloat(form.marginPercent) : defaultMarginPercent,
+    });
+
+    const recalcPrice = (form: typeof itemForm) => priceQuoteItem(priceArgs(form));
 
     const handleDoorTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const updated = { ...itemForm, doorTypeId: e.target.value };
+        const doorTypeId = e.target.value;
+        const dt = doorTypes.find(d => d.id === parseInt(doorTypeId));
+        let updated = { ...itemForm, doorTypeId };
+
+        const isCavityLeaf = dt && (dt.isCavityOnly || isCavityDoorType(dt.name));
+        if (isCavityLeaf && !CAVITY_CONFIGS.includes(updated.doorConfiguration)) {
+            updated = { ...updated, doorConfiguration: 'Single Cavity', thicknessMm: '37', cavitySliderTypeId: '', trackTypeId: '', hingeCount: '' };
+        }
+
         setItemForm({ ...updated, unitPrice: recalcPrice(updated) });
     };
 
     const handleDoorDimensionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const updated = { ...itemForm, [e.target.name]: e.target.value };
+        if (e.target.name === 'heightMm' && HINGED_CONFIGS.includes(updated.doorConfiguration)) {
+            updated.hingeCount = String(hingeCountForHeight(parseInt(e.target.value) || null));
+        }
+        setItemForm({ ...updated, unitPrice: recalcPrice(updated) });
+    };
+
+    const handleConfigChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const config = e.target.value;
+        const updated = { ...itemForm, doorConfiguration: config, cavitySliderTypeId: '', trackTypeId: '' };
+        updated.thicknessMm = CAVITY_CONFIGS.includes(config) ? '37' : itemForm.thicknessMm;
+        updated.hingeCount = HINGED_CONFIGS.includes(config) ? String(hingeCountForHeight(parseInt(updated.heightMm) || null)) : '';
         setItemForm({ ...updated, unitPrice: recalcPrice(updated) });
     };
 
@@ -63,45 +98,88 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
         setItemForm({ ...updated, unitPrice: recalcPrice(updated) });
     };
 
+    const handleProductPick = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const id = e.target.value;
+        setProductPickerId(id);
+        if (!id) return;
+        const product = products.find(p => p.id === parseInt(id));
+        if (!product) return;
+
+        const doorComponent = product.components.find(c => c.componentType === 'DoorType');
+        if (!doorComponent) {
+            const total = productTotalCost(product, { doorTypes, jambTypes, hingeTypes, handleTypes, cavitySliderTypes, trackTypes });
+            setItemForm(prev => ({
+                ...prev,
+                itemType: 'Misc',
+                productId: id,
+                notes: prev.notes || product.description || product.name,
+                unitPrice: total > 0 ? total.toString() : prev.unitPrice,
+            }));
+            return;
+        }
+
+        const jambComponent = product.components.find(c => c.componentType === 'JambType');
+        const hingeComponent = product.components.find(c => c.componentType === 'HingeType');
+        const handleComponent = product.components.find(c => c.componentType === 'HandleType');
+        const trackComponent = product.components.find(c => c.componentType === 'TrackType');
+        const cavityComponent = product.components.find(c => c.componentType === 'CavitySliderType');
+        const jamb = jambComponent ? jambTypes.find(j => j.id === jambComponent.componentId) : undefined;
+
+        const updated = {
+            ...itemForm,
+            productId: id,
+            itemType: (doorComponent.configuration ? 'Prehung' : 'DoorLeaf') as typeof itemForm.itemType,
+            doorTypeId: doorComponent.componentId?.toString() ?? '',
+            doorConfiguration: doorComponent.configuration ?? '',
+            heightMm: doorComponent.heightMm?.toString() ?? itemForm.heightMm,
+            widthMm: doorComponent.widthMm?.toString() ?? itemForm.widthMm,
+            thicknessMm: doorComponent.thicknessMm?.toString() ?? itemForm.thicknessMm,
+            jam: jamb?.name ?? itemForm.jam,
+            hingeTypeId: hingeComponent?.componentId?.toString() ?? itemForm.hingeTypeId,
+            hingeCount: hingeComponent ? String(hingeComponent.quantity) : itemForm.hingeCount,
+            handleTypeId: handleComponent?.componentId?.toString() ?? itemForm.handleTypeId,
+            trackTypeId: trackComponent?.componentId?.toString() ?? itemForm.trackTypeId,
+            cavitySliderTypeId: cavityComponent?.componentId?.toString() ?? itemForm.cavitySliderTypeId,
+            notes: itemForm.notes || product.description || '',
+        };
+
+        const livePrice = recalcPrice(updated);
+        const unitPrice = doorComponent.customPrice != null ? doorComponent.customPrice.toString() : livePrice;
+        setItemForm({ ...updated, unitPrice });
+    };
+
     const handleSave = () => {
         onAdd(buildOrderItem(itemForm, sortOrder, 1), editIndex ?? null);
         setItemForm(blankItemForm());
+        setProductPickerId('');
     };
 
     const isDoorItem = itemForm.itemType === 'Prehung' || itemForm.itemType === 'DoorLeaf';
     const isPrehung = isDoorItem;
+    const isCavityConfig = CAVITY_CONFIGS.includes(itemForm.doorConfiguration);
+    const isHingedConfig = HINGED_CONFIGS.includes(itemForm.doorConfiguration);
+    const sliderTrackType = SLIDER_TRACK_CONFIGS[itemForm.doorConfiguration];
+    const availableTracks = sliderTrackType ? trackTypes.filter(t => t.trackTypeName === sliderTrackType) : [];
 
-    // Build price breakdown for display
     const getPriceBreakdown = () => {
         if (!itemForm.doorTypeId) return null;
-        const dt = doorTypes.find(d => d.id === parseInt(itemForm.doorTypeId));
-        if (!dt) return null;
+        const b = priceQuoteItemBreakdown(priceArgs(itemForm));
 
-        let doorPrice = 0;
-        if (dt.prices && itemForm.heightMm && itemForm.widthMm) {
-            const h = parseInt(itemForm.heightMm);
-            const w = parseInt(itemForm.widthMm);
-            const t = itemForm.thicknessMm ? parseInt(itemForm.thicknessMm) : 35;
-            const matchesPriceFor = (p: { priceFor?: string | null }) => !p.priceFor || p.priceFor === itemForm.itemType;
-            const configMatch = itemForm.doorConfiguration
-                ? dt.prices.find(p => p.configuration === itemForm.doorConfiguration && p.heightMm === h && p.widthMm === w && p.thicknessMm === t && matchesPriceFor(p))
-                : null;
-            const anyMatch = dt.prices.find(p => !p.configuration && p.heightMm === h && p.widthMm === w && p.thicknessMm === t && matchesPriceFor(p));
-            const match = configMatch ?? anyMatch;
-            if (match) doorPrice = match.price;
-        }
+        const parts: string[] = [`Door: $${b.doorPrice.toFixed(2)}`];
+        if (isCavityConfig && b.cavityPrice > 0) parts.push(`Cavity Unit: $${b.cavityPrice.toFixed(2)}`);
+        if (b.jambPrice > 0) parts.push(`Jamb: $${b.jambPrice.toFixed(2)}`);
+        if (b.handlePrice > 0) parts.push(`Handle: $${b.handlePrice.toFixed(2)}`);
+        if (isHingedConfig && b.hingePrice > 0) parts.push(`Hinges: $${b.hingePrice.toFixed(2)}`);
+        if (b.trackPrice > 0) parts.push(`Track: $${b.trackPrice.toFixed(2)}`);
 
-        const jt = jambTypes.find(j => j.name === itemForm.jam);
-        const ht = handleTypes.find(h => h.id === parseInt(itemForm.handleTypeId));
+        const totalLabour = b.doorLabour + b.cavityLabour + b.jambLabour + b.handleLabour + b.hingeLabour;
+        if (totalLabour > 0) parts.push(`Labour: $${totalLabour.toFixed(2)}`);
 
-        const parts: string[] = [`Door: $${doorPrice.toFixed(2)}`];
-        if (jt && jt.price > 0) parts.push(`Jamb: $${jt.price.toFixed(2)}`);
-        if (ht && ht.price > 0) parts.push(`Handle: $${ht.price.toFixed(2)}`);
-
-        return parts.length > 1 ? parts.join(' + ') : null;
+        const materials = parts.join(' + ');
+        return `${materials} = $${b.cost.toFixed(2)} cost, +${b.marginPercent}% margin = $${b.total.toFixed(2)}`;
     };
 
-    const priceBreakdown = isDoorItem ? getPriceBreakdown() : null;
+    const priceBreakdown = isDoorItem && isAdmin ? getPriceBreakdown() : null;
 
     return (
         <Modal
@@ -111,6 +189,15 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
             onConfirm={handleSave}
             confirmLabel={editIndex != null ? 'Save Changes' : 'Add Item'}
         >
+            {editIndex == null && products.length > 0 && (
+                <div className="form-row">
+                    <SelectField label="Start from Product (optional)" value={productPickerId} onChange={handleProductPick}>
+                        <option value="">— Build manually —</option>
+                        {activeOnly(products).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </SelectField>
+                </div>
+            )}
+
             <div className="form-row">
                 <SelectField label="Type" name="itemType" value={itemForm.itemType} onChange={handleItemTypeChange}>
                     <option value="Prehung">Prehung</option>
@@ -124,14 +211,16 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
             {isPrehung ? (
                 <>
                     <div className="form-row">
-                        <SelectField label="Configuration" name="doorConfiguration" value={itemForm.doorConfiguration} onChange={handlePricingFieldChange}>
+                        <SelectField label="Configuration" name="doorConfiguration" value={itemForm.doorConfiguration} onChange={handleConfigChange}>
                             <option value="">Select...</option>
                             {DOOR_CONFIGS.map(c => <option key={c} value={c}>{c}</option>)}
                         </SelectField>
                         <SelectField label="Door Type" name="doorTypeId" value={itemForm.doorTypeId} onChange={handleDoorTypeChange}>
                             <option value="">Select door type...</option>
                             {activeOnly(doorTypes).map(d => (
-                                <option key={d.id} value={d.id}>{d.name}{d.material ? ` — ${d.material}` : ''}</option>
+                                <option key={d.id} value={d.id}>
+                                    {d.name}{d.material ? ` — ${d.material}` : ''}{(d.isCavityOnly || isCavityDoorType(d.name)) ? ' (Cavity)' : ''}
+                                </option>
                             ))}
                         </SelectField>
                     </div>
@@ -174,6 +263,34 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
                             )}
                         </FormField>
                     </div>
+
+                    {isCavityConfig && (
+                        <div className="form-row">
+                            <SelectField label="Cavity Slider Unit" name="cavitySliderTypeId" value={itemForm.cavitySliderTypeId} onChange={handlePricingFieldChange}>
+                                <option value="">Select...</option>
+                                {activeOnly(cavitySliderTypes).map(c => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.supplier} — {c.productSystem}{c.widthRange ? ` (${c.widthRange})` : ''}{c.isPOA ? ' — POA' : c.price ? ` (+$${c.price.toFixed(2)})` : ''}
+                                    </option>
+                                ))}
+                            </SelectField>
+                        </div>
+                    )}
+
+                    {sliderTrackType && (
+                        <div className="form-row">
+                            <SelectField label={`Track (${sliderTrackType})`} name="trackTypeId" value={itemForm.trackTypeId} onChange={handlePricingFieldChange}>
+                                <option value="">Select...</option>
+                                {activeOnly(availableTracks).map(t => (
+                                    <option key={t.id} value={t.id}>
+                                        {t.supplier} — {t.trackSystem}{t.colour ? ` — ${t.colour}` : ''}{t.price ? ` (+$${t.price.toFixed(2)})` : ''}
+                                    </option>
+                                ))}
+                            </SelectField>
+                            <TextField label="Colour" name="colourFinish" value={itemForm.colourFinish} onChange={handleItemChange} placeholder="e.g. Anodised White" />
+                        </div>
+                    )}
+
                     <div className="form-row">
                         <SelectField label="Hang Side" name="handSide" value={itemForm.handSide} onChange={handleItemChange}>
                             <option value="">—</option>
@@ -182,12 +299,12 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
                         </SelectField>
                     </div>
                     <div className="form-row">
-                        <FormField label="Jamb">
+                        <FormField label="Jamb (loose — priced per metre)">
                             <select name="jam" value={itemForm.jam} onChange={handlePricingFieldChange}>
                                 <option value="">—</option>
                                 {activeOnly(jambTypes).map(j => (
                                     <option key={j.id} value={j.name}>
-                                        {j.name}{j.price > 0 ? ` (+$${j.price.toFixed(2)})` : ''}
+                                        {j.name}{j.costPerMetre ? ` ($${j.costPerMetre.toFixed(2)}/m)` : ''}
                                     </option>
                                 ))}
                                 <option value="Special">Special</option>
@@ -205,6 +322,21 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
                             ))}
                         </SelectField>
                     </div>
+
+                    {isHingedConfig && (
+                        <div className="form-row">
+                            <SelectField label="Hinge Type" name="hingeTypeId" value={itemForm.hingeTypeId} onChange={handlePricingFieldChange}>
+                                <option value="">—</option>
+                                {activeOnly(hingeTypes).map(h => (
+                                    <option key={h.id} value={h.id}>
+                                        {h.name}{h.finish ? ` — ${h.finish}` : ''}{h.price > 0 ? ` (+$${h.price.toFixed(2)} each)` : ''}
+                                    </option>
+                                ))}
+                            </SelectField>
+                            <TextField label="Hinge Count (per leaf)" type="number" name="hingeCount" value={itemForm.hingeCount} onChange={handlePricingFieldChange} placeholder="auto from height" />
+                        </div>
+                    )}
+
                     <div className="form-row">
                         <TextField label="Glazing" name="glazing" value={itemForm.glazing} onChange={handleItemChange} placeholder="e.g. Clear 6mm" />
                         <TextField label="Fire Rating" name="fireRating" value={itemForm.fireRating} onChange={handleItemChange} placeholder="e.g. FRR 60" />
@@ -219,6 +351,9 @@ const QuoteItemModal: React.FC<QuoteItemModalProps> = ({
                         )}
                     </div>
                     <div className="form-row">
+                        {isAdmin && (
+                            <TextField label="Margin %" type="number" name="marginPercent" value={itemForm.marginPercent} onChange={handlePricingFieldChange} placeholder="25" />
+                        )}
                         <FormField label="Unit Price">
                             <input type="number" name="unitPrice" value={itemForm.unitPrice} onChange={handleItemChange} placeholder="0.00" />
                             {priceBreakdown && (

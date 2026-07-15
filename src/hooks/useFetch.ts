@@ -10,7 +10,6 @@ export function useFetch<T>(fetchFn: () => Promise<T>, initialValue: T, errorMes
             .then(setData)
             .catch(() => setError(errorMessage))
             .finally(() => setLoading(false));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return { data, setData, loading, error };

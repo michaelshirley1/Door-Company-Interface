@@ -52,6 +52,9 @@ namespace BusinessApi.Factories
             existing.Finish = handleType.Finish;
             existing.Mechanism = handleType.Mechanism;
             existing.Description = handleType.Description;
+            existing.Supplier = handleType.Supplier;
+            existing.Colour = handleType.Colour;
+            existing.LabourCost = handleType.LabourCost;
             existing.IsActive = handleType.IsActive;
             existing.Price = handleType.Price;
             _db.SaveChanges();

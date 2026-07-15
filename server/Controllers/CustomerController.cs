@@ -1,5 +1,6 @@
 using BusinessApi.Factories;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +12,12 @@ namespace BusinessApi.Controllers;
 public class CustomerController : ControllerBase
 {
     private readonly ICustomerFactory _customerFactory;
+    private readonly ICurrentUserService _currentUser;
 
-    public CustomerController(ICustomerFactory customerFactory)
+    public CustomerController(ICustomerFactory customerFactory, ICurrentUserService currentUser)
     {
         _customerFactory = customerFactory;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -37,6 +40,7 @@ public class CustomerController : ControllerBase
     [ProducesResponseType(typeof(Customer), StatusCodes.Status201Created)]
     public IActionResult Create([FromBody] Customer customer)
     {
+        if (!_currentUser.IsAdmin(User)) customer.MarginPercent = null;
         var created = _customerFactory.Create(customer);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
@@ -46,15 +50,17 @@ public class CustomerController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Update(int id, [FromBody] Customer customer)
     {
-        var updated = _customerFactory.Update(id, customer);
+        var updated = _customerFactory.Update(id, customer, _currentUser.IsAdmin(User));
         return updated is null ? NotFound($"Customer {id} not found.") : Ok(updated);
     }
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         return _customerFactory.Delete(id) ? NoContent() : NotFound($"Customer {id} not found.");
     }
 }

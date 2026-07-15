@@ -7,7 +7,6 @@ namespace BusinessApi.Models
         public string CustomerName { get; set; } = string.Empty;
         public string QuoteNumber { get; set; } = string.Empty;
         public string Status { get; set; } = "Draft";
-        // Draft | Sent | Accepted | Declined | Expired
 
         public int? JobId { get; set; }
         public string? JobNumber { get; set; }

@@ -3,26 +3,55 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FormWrapper } from '../../../../components/form-wrapper';
 import { FormField, TextField, SelectField, TextAreaField } from '../../../../components/form-field';
 import { Table } from '../../../../components/table';
+import { HeaderItem } from '../../../../components/table/model';
 import Loading from '../../../../components/loading';
 import Button from '../../../../components/button';
 import { PurchaseOrder } from '../model';
-import { getOrder, updateOrder, deleteOrder } from '../api';
+import { getOrder, updateOrder, deleteOrder, setItemDispatched } from '../api';
 import { OrderItem } from '../../jobs/model';
 import { DoorType } from '../../../side-pages/door-types/model';
 import { HandleType } from '../../../side-pages/handle-types/model';
+import { HingeType } from '../../../side-pages/hinge-types/model';
+import { JambType, JambRequirement } from '../../../side-pages/jamb-types/model';
+import { CavitySliderType } from '../../../side-pages/cavity-sliders/model';
+import { TrackType } from '../../../side-pages/track-types/model';
 import { getDoorTypes } from '../../../side-pages/door-types/api';
 import { getHandleTypes } from '../../../side-pages/handle-types/api';
+import { getHingeTypes } from '../../../side-pages/hinge-types/api';
+import { getJambTypes, getJambRequirements } from '../../../side-pages/jamb-types/api';
+import { getCavitySliders } from '../../../side-pages/cavity-sliders/api';
+import { getTrackTypes } from '../../../side-pages/track-types/api';
 import { createInvoice } from '../../invoices/api';
 import ReadOnlyField from '../../../../components/read-only-field';
 import { formatCurrency, todayISO } from '../../../../shared/format';
 import { getApiErrorMessage } from '../../../../api/errors';
+import { ORDER_STATUSES } from '../../../../shared/constants';
+import { generateDispatchPdf } from '../../../../utils/jobPdf';
+import { generateProductionPdf } from '../../../../utils/productionPdf';
+import { useAuth } from '../../../../auth/AuthContext';
+
+const STATUS_FLOW = ['Received', 'Confirmed', 'InProduction', 'Ready', 'Dispatched', 'Delivered'];
+const NEXT_STATUS_LABEL: Record<string, string> = {
+    Received: 'Mark Confirmed',
+    Confirmed: 'Mark In Production',
+    InProduction: 'Mark Ready',
+    Ready: 'Mark Dispatched',
+    Dispatched: 'Mark Delivered',
+};
 
 const OrderFormPage: React.FC = () => {
     const navigate = useNavigate();
+    const { isAdmin } = useAuth();
     const { id } = useParams<{ id: string }>();
     const [existing, setExisting] = useState<PurchaseOrder | undefined>();
+    const [items, setItems] = useState<OrderItem[]>([]);
     const [doorTypes, setDoorTypes] = useState<DoorType[]>([]);
     const [handleTypes, setHandleTypes] = useState<HandleType[]>([]);
+    const [hingeTypes, setHingeTypes] = useState<HingeType[]>([]);
+    const [jambTypes, setJambTypes] = useState<JambType[]>([]);
+    const [jambRequirements, setJambRequirements] = useState<JambRequirement[]>([]);
+    const [cavitySliderTypes, setCavitySliderTypes] = useState<CavitySliderType[]>([]);
+    const [trackTypes, setTrackTypes] = useState<TrackType[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [creatingInvoice, setCreatingInvoice] = useState(false);
@@ -41,8 +70,14 @@ const OrderFormPage: React.FC = () => {
         Promise.all([
             getDoorTypes().then(setDoorTypes),
             getHandleTypes().then(setHandleTypes),
+            getHingeTypes().then(setHingeTypes),
+            getJambTypes().then(setJambTypes),
+            getJambRequirements().then(setJambRequirements),
+            getCavitySliders().then(setCavitySliderTypes),
+            getTrackTypes().then(setTrackTypes),
             getOrder(parseInt(id)).then(order => {
                 setExisting(order);
+                setItems(order.quote?.items ?? []);
                 setForm({
                     poNumber:         order.poNumber         ?? '',
                     status:           order.status           ?? 'Received',
@@ -105,6 +140,23 @@ const OrderFormPage: React.FC = () => {
             .finally(() => setSaving(false));
     };
 
+    const allDispatched = items.length > 0 && items.every(i => i.isDispatched);
+
+    const handleToggleDispatched = (item: OrderItem, checked: boolean) => {
+        if (!existing) return;
+        setItems(prev => prev.map(i => i.id === item.id ? { ...i, isDispatched: checked } : i));
+        setItemDispatched(existing.id, item.id, checked).catch(err => {
+            apiError(err, 'Failed to update item');
+            setItems(prev => prev.map(i => i.id === item.id ? { ...i, isDispatched: !checked } : i));
+        });
+    };
+
+    const handleAdvanceStatus = () => {
+        const idx = STATUS_FLOW.indexOf(form.status);
+        if (idx === -1 || idx === STATUS_FLOW.length - 1) return;
+        transitionStatus(STATUS_FLOW[idx + 1]);
+    };
+
     const handleCreateInvoice = async () => {
         if (!existing) return;
         setError(null);
@@ -119,7 +171,7 @@ const OrderFormPage: React.FC = () => {
                 ? existing.quote.quoteNumber
                 : null;
             const invoice = await createInvoice({
-                invoiceNumber: `INV-${existing.poNumber ?? existing.id}`,
+                invoiceNumber: '', 
                 jobId:         existing.jobId,
                 jobNumber:     existing.jobNumber,
                 quoteId:       existing.quoteId,
@@ -143,68 +195,67 @@ const OrderFormPage: React.FC = () => {
         }
     };
 
-    const handlePrintDocket = (type: 'Production' | 'Dispatch') => {
-        const items = existing?.quote?.items ?? [];
-        const win = window.open('', '_blank');
-        if (!win) return;
-        const itemRows = items.map(item => {
-            const dt = doorTypes.find(d => d.id === item.doorTypeId);
-            const ht = handleTypes.find(h => h.id === item.handleTypeId);
-            const typeName = dt?.name ?? item.itemType;
-            const handleInfo = ht ? ` + ${ht.name}${ht.finish ? ` (${ht.finish})` : ''}` : '';
-            return `<tr>
-                <td>${item.room ?? '—'}</td>
-                <td>${typeName}${handleInfo}</td>
-                <td>${item.heightMm ?? '—'} × ${item.widthMm ?? '—'}</td>
-                <td>${item.handSide ?? '—'}</td>
-                <td>${item.quantity ?? 1}</td>
-                <td>${item.notes ?? '—'}</td>
-            </tr>`;
-        }).join('');
-        win.document.write(`
-            <html><head><title>${type} Docket — ${existing?.poNumber ?? existing?.id}</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 24px; color: #111; }
-                h2 { margin-bottom: 4px; }
-                p { margin: 2px 0; color: #555; }
-                table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-                th { background: #f0f0f0; padding: 8px; text-align: left; font-size: 12px; border: 1px solid #ccc; }
-                td { padding: 8px; font-size: 12px; border: 1px solid #ccc; }
-            </style></head><body>
-            <h2>${type} Docket</h2>
-            <p><strong>Order:</strong> ${existing?.poNumber ?? `PO #${existing?.id}`}</p>
-            <p><strong>Customer:</strong> ${existing?.customerName ?? '—'}</p>
-            ${existing?.siteAddress ? `<p><strong>Site Address:</strong> ${existing.siteAddress}</p>` : ''}
-            ${form.expectedDelivery ? `<p><strong>Expected Delivery:</strong> ${form.expectedDelivery}</p>` : ''}
-            <table>
-                <thead><tr><th>Room</th><th>Type</th><th>Size (H×W mm)</th><th>Hang</th><th>Qty</th><th>Notes</th></tr></thead>
-                <tbody>${itemRows}</tbody>
-            </table>
-            </body></html>
-        `);
-        win.document.close();
-        win.print();
+    const handlePrintProduction = () => {
+        if (!existing) return;
+        generateProductionPdf(existing, { doorTypes, hingeTypes, handleTypes, jambTypes, jambRequirements, cavitySliderTypes, trackTypes });
     };
 
-    const items: OrderItem[] = existing?.quote?.items ?? [];
+    const handlePrintDispatch = () => {
+        if (!existing) return;
+        generateDispatchPdf(existing, { doorTypes, hingeTypes, handleTypes });
+    };
+
+    const itemHeaders: HeaderItem<OrderItem>[] = [
+        { id: 'itemType',  title: 'Type' },
+        { id: 'room',      title: 'Room' },
+        { id: 'heightMm',  title: 'H (mm)' },
+        { id: 'widthMm',   title: 'W (mm)' },
+        { id: 'handSide',  title: 'Hang' },
+        { id: 'notes',     title: 'Notes' },
+        { id: 'quantity',  title: 'Qty',    render: (v) => v ?? 1 },
+        { id: 'unitPrice', title: 'Price',  render: (v) => formatCurrency(v) },
+        ...(form.status === 'Dispatched' ? [{
+            id: 'isDispatched' as keyof OrderItem,
+            title: 'Sent',
+            render: (_v: unknown, row: OrderItem) => (
+                <input
+                    type="checkbox"
+                    checked={!!row.isDispatched}
+                    onChange={e => handleToggleDispatched(row, e.target.checked)}
+                />
+            ),
+        }] : []),
+    ];
 
     const workflowActions = existing ? (
         <>
-            {['Received', 'Confirmed', 'InProduction', 'Ready'].includes(form.status) && (
-                <Button variant="secondary" onClick={() => handlePrintDocket('Production')} disabled={saving}>
+            {['Received', 'Confirmed', 'InProduction', 'Ready', 'Dispatched'].includes(form.status) && (
+                <Button variant="secondary" onClick={handlePrintProduction} disabled={saving}>
                     Print Production Docket
                 </Button>
             )}
-            {['Ready', 'Delivered'].includes(form.status) && (
-                <Button variant="secondary" onClick={() => handlePrintDocket('Dispatch')} disabled={saving}>
+            {['Ready', 'Dispatched', 'Delivered'].includes(form.status) && (
+                <Button variant="secondary" onClick={handlePrintDispatch} disabled={saving}>
                     Print Dispatch Docket
                 </Button>
             )}
-            {form.status === 'Received'     && <Button variant="primary" onClick={() => transitionStatus('Confirmed')}   loading={saving} disabled={saving}>Mark Confirmed</Button>}
-            {form.status === 'Confirmed'    && <Button variant="primary" onClick={() => transitionStatus('InProduction')} loading={saving} disabled={saving}>Mark In Production</Button>}
-            {form.status === 'InProduction' && <Button variant="primary" onClick={() => transitionStatus('Ready')}       loading={saving} disabled={saving}>Mark Ready</Button>}
-            {form.status === 'Ready'        && <Button variant="primary" onClick={() => transitionStatus('Delivered')}   loading={saving} disabled={saving}>Mark Delivered</Button>}
-            {form.status === 'Delivered'    && (
+            {form.status === 'Dispatched' && (
+                <Button
+                    variant="primary"
+                    onClick={handleAdvanceStatus}
+                    loading={saving}
+                    disabled={saving || !allDispatched}
+                    title={!allDispatched ? 'Tick every item as sent before marking delivered' : undefined}
+                >
+                    {NEXT_STATUS_LABEL[form.status]}
+                </Button>
+            )}
+            {['Received', 'Confirmed', 'InProduction', 'Ready'].includes(form.status) && (
+                <Button variant="primary" onClick={handleAdvanceStatus} loading={saving} disabled={saving}>
+                    {NEXT_STATUS_LABEL[form.status]}
+                </Button>
+            )}
+            {form.status === 'Delivered' && (
                 <Button variant="primary" onClick={handleCreateInvoice} loading={creatingInvoice} disabled={saving || creatingInvoice}>
                     Create Invoice
                 </Button>
@@ -219,7 +270,7 @@ const OrderFormPage: React.FC = () => {
             title={existing ? `Order ${existing.poNumber ?? `#${existing.id}`}` : 'Order'}
             onSubmit={handleSubmit}
             onCancel={() => navigate(getReturnPath())}
-            onDelete={existing ? handleDelete : undefined}
+            onDelete={existing && isAdmin ? handleDelete : undefined}
             extraActions={workflowActions}
             error={error}
             submitting={saving}
@@ -243,14 +294,9 @@ const OrderFormPage: React.FC = () => {
             )}
 
             <div className="form-row">
-                <TextField label="PO Number" name="poNumber" value={form.poNumber} onChange={handleChange} placeholder="PO-2026-001" />
+                <ReadOnlyField label="PO Number" value={form.poNumber || 'Assigned on save'} />
                 <SelectField label="Status" name="status" value={form.status} onChange={handleChange}>
-                    <option value="Received">Received</option>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="InProduction">In Production</option>
-                    <option value="Ready">Ready</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="Cancelled">Cancelled</option>
+                    {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                 </SelectField>
             </div>
 
@@ -264,18 +310,9 @@ const OrderFormPage: React.FC = () => {
             <TextField label="Expected Delivery" type="date" name="expectedDelivery" value={form.expectedDelivery} onChange={handleChange} />
 
             {items.length > 0 && (
-                <FormField label="Items (from Quote)">
+                <FormField label={form.status === 'Dispatched' ? 'Items (from Quote) — tick each item as it goes out' : 'Items (from Quote)'}>
                     <Table<OrderItem>
-                        headers={[
-                            { id: 'itemType',  title: 'Type' },
-                            { id: 'room',      title: 'Room' },
-                            { id: 'heightMm',  title: 'H (mm)' },
-                            { id: 'widthMm',   title: 'W (mm)' },
-                            { id: 'handSide',  title: 'Hang' },
-                            { id: 'notes',     title: 'Notes' },
-                            { id: 'quantity',  title: 'Qty',    render: (v) => v ?? 1 },
-                            { id: 'unitPrice', title: 'Price',  render: (v) => formatCurrency(v) },
-                        ]}
+                        headers={itemHeaders}
                         rows={items}
                     />
                     {existing?.quote?.totalAmount != null && (

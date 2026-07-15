@@ -1,9 +1,13 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BusinessApi", "server\BusinessApi.csproj", "{E24DDCE4-2B43-48E7-9A57-263BD7CBA918}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "server", "server", "{05D8740A-C3FB-451A-8B68-2B54B0EFEBDE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusinessApi.Tests", "server\BusinessApi.Tests\BusinessApi.Tests.csproj", "{DB30773A-8A24-4DCE-AA14-B69065CF4B89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,11 +19,18 @@ Global
 		{E24DDCE4-2B43-48E7-9A57-263BD7CBA918}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E24DDCE4-2B43-48E7-9A57-263BD7CBA918}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E24DDCE4-2B43-48E7-9A57-263BD7CBA918}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB30773A-8A24-4DCE-AA14-B69065CF4B89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB30773A-8A24-4DCE-AA14-B69065CF4B89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB30773A-8A24-4DCE-AA14-B69065CF4B89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB30773A-8A24-4DCE-AA14-B69065CF4B89}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {33476ED0-2A5D-4D98-92C6-8208961D9584}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DB30773A-8A24-4DCE-AA14-B69065CF4B89} = {05D8740A-C3FB-451A-8B68-2B54B0EFEBDE}
 	EndGlobalSection
 EndGlobal

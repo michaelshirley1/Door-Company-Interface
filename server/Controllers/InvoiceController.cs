@@ -1,5 +1,6 @@
 using BusinessApi.Factories;
 using BusinessApi.Models;
+using BusinessApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,10 +12,14 @@ namespace BusinessApi.Controllers;
 public class InvoiceController : ControllerBase
 {
     private readonly IInvoiceFactory _invoiceFactory;
+    private readonly IOrderFactory _orderFactory;
+    private readonly ICurrentUserService _currentUser;
 
-    public InvoiceController(IInvoiceFactory invoiceFactory)
+    public InvoiceController(IInvoiceFactory invoiceFactory, IOrderFactory orderFactory, ICurrentUserService currentUser)
     {
         _invoiceFactory = invoiceFactory;
+        _orderFactory = orderFactory;
+        _currentUser = currentUser;
     }
 
     [HttpGet]
@@ -35,8 +40,12 @@ public class InvoiceController : ControllerBase
 
     [HttpPost]
     [ProducesResponseType(typeof(Invoice), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public IActionResult Create([FromBody] Invoice invoice)
     {
+        if (invoice.QuoteId.HasValue && !_orderFactory.AreAllItemsDispatched(invoice.QuoteId.Value))
+            return BadRequest("All items must be marked as dispatched before an invoice can be created.");
+
         var created = _invoiceFactory.Create(invoice);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
@@ -52,9 +61,11 @@ public class InvoiceController : ControllerBase
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public IActionResult Delete(int id)
     {
+        if (!_currentUser.IsAdmin(User)) return Forbid();
         return _invoiceFactory.Delete(id) ? NoContent() : NotFound($"Invoice {id} not found.");
     }
 }

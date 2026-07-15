@@ -7,7 +7,7 @@ import "./style.scss"
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, isOwner } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [xeroNotice, setXeroNotice] = useState<{ message: string; ok: boolean } | null>(null);
 
@@ -52,9 +52,8 @@ export default function Layout({ children }: LayoutProps) {
                     <button onClick={() => navigate("/orders")}>Orders</button>
                     <button onClick={() => navigate("/invoices")}>Invoices</button>
                     <div className="nav-divider" />
-                    <button onClick={() => navigate("/doors")}>Doors</button>
-                    <button onClick={() => navigate("/cavity-sliders")}>Cavity Sliders</button>
-                    <button onClick={() => navigate("/hardware")}>Hardware</button>
+                    <button onClick={() => navigate("/products")}>Products</button>
+                    {isOwner && <button onClick={() => navigate("/settings")}>Settings</button>}
                 </div>
                 <button className="layout-signout" onClick={handleSignOut}>Sign out</button>
                 <button className="layout-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
@@ -70,9 +69,8 @@ export default function Layout({ children }: LayoutProps) {
                     <button onClick={() => navTo("/orders")}>Orders</button>
                     <button onClick={() => navTo("/invoices")}>Invoices</button>
                     <div className="mobile-nav-divider" />
-                    <button onClick={() => navTo("/doors")}>Doors</button>
-                    <button onClick={() => navTo("/cavity-sliders")}>Cavity Sliders</button>
-                    <button onClick={() => navTo("/hardware")}>Hardware</button>
+                    <button onClick={() => navTo("/products")}>Products</button>
+                    {isOwner && <button onClick={() => navTo("/settings")}>Settings</button>}
                     <div className="mobile-nav-divider" />
                     <button className="mobile-signout" onClick={handleSignOut}>Sign out</button>
                 </div>

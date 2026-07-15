@@ -6,6 +6,9 @@ export interface HandleType {
     finish: string | null;
     mechanism: string | null;
     description: string | null;
+    supplier?: string | null;
+    colour?: string | null;
+    labourCost?: number | null;
     isActive: boolean;
     price: number;
     createdAt: string;

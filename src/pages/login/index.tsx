@@ -26,7 +26,7 @@ const LoginPage: React.FC = () => {
     return (
         <div className="login-wrapper">
             <div className="login-card">
-                <img className="login-logo" src="/assets/fulllogo.png" alt="DoorStop" />
+                <img className="login-logo" src="/assets/fulllogo.png" alt="DoorShop" />
                 <form className="login-form" onSubmit={handleSubmit}>
                     <div className="login-field">
                         <label htmlFor="email">Email</label>

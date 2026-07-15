@@ -8,7 +8,6 @@
         public string? JobNumber { get; set; }
         public string CustomerName { get; set; } = string.Empty;
         public string Status { get; set; } = "Scheduled";
-        // Scheduled | InProgress | OnHold | Completed | Cancelled
 
         public string? SiteAddress { get; set; }
         public string? SiteDescription { get; set; }
