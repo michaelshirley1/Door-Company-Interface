@@ -1,8 +1,22 @@
-# DoorStop — Door Company Management Software
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="public/assets/logo-light.svg">
+    <img src="public/assets/logo-light.svg" width="72" alt="DoorStop logo">
+  </picture>
+</p>
 
-**This is a neutered version, full version avaliable on request**
+<h1 align="center">DoorStop</h1>
+<p align="center">Internal management dashboard for a door company.</p>
 
-Internal management dashboard for a door company. Manage jobs, quotes, customers, invoices, purchase orders, and a full hardware/product catalogue from a single dashboard, with Xero invoicing built in.
+<p align="center">
+  <img alt="CI" src="https://github.com/michaelshirley1/door-manager-prod/actions/workflows/ci.yml/badge.svg">
+  <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8-512BD4">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-61DAFB">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-4.9-3178C6">
+</p>
+
+Manage jobs, quotes, customers, invoices, purchase orders, and a full hardware/product catalogue from a single dashboard, with Xero invoicing built in.
 
 <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items:flex-start;">
   <img width="1911" height="853" alt="image" src="https://github.com/user-attachments/assets/1feb2103-f0bb-4129-8905-1fad123dde2b" />
@@ -12,13 +26,13 @@ Internal management dashboard for a door company. Manage jobs, quotes, customers
 
 ## What it does
 
-- **Jobs** — track installation jobs through their lifecycle (Scheduled → In Progress → On Hold → Completed → Cancelled)
-- **Quotes** — build customer quotes from a catalogue of doors, hardware, and custom line items, from draft through to accepted/declined
-- **Invoices** — generate invoices from quotes with automatic 15% GST, and push them straight to **Xero** as ACCREC invoices via OAuth2
-- **Purchase Orders** — raise and track supplier orders, with per-item dispatch tracking
-- **Customers** — maintain customer records and contact details
-- **Product Catalogue** — doors (with a full pricing matrix by configuration/jamb/height/width/thickness), jamb types (metre-based pricing), hinges, handles, cavity sliders, tracks, and bundled products
-- **Auth** — gated behind Supabase auth on both frontend (route guard) and backend (JWT validated via JWKS)
+- **Jobs** - track installation jobs through their lifecycle (Scheduled, In Progress, On Hold, Completed, Cancelled)
+- **Quotes** - build customer quotes from a catalogue of doors, hardware, and custom line items, from draft through to accepted/declined
+- **Invoices** - generate invoices from quotes with automatic 15% GST, and push them straight to **Xero** as ACCREC invoices via OAuth2
+- **Purchase Orders** - raise and track supplier orders, with per-item dispatch tracking
+- **Customers** - maintain customer records and contact details
+- **Product Catalogue** - doors (with a full pricing matrix by configuration/jamb/height/width/thickness), jamb types (metre-based pricing), hinges, handles, cavity sliders, tracks, and bundled products
+- **Auth** - gated behind Supabase auth on both frontend (route guard) and backend (JWT validated via JWKS)
 
 ## Stack
 
@@ -44,8 +58,8 @@ server/                        .NET 8 Web API
   Program.cs
 src/                            React frontend
   root/                         app entry, routes.tsx (ProtectedRoute gate), layout/
-  auth/                         AuthContext.tsx — Supabase session state
-  lib/                          supabase.ts — Supabase client init
+  auth/                         AuthContext.tsx - Supabase session state
+  lib/                          supabase.ts - Supabase client init
   pages/
     login/                      public route, outside ProtectedRoute
     home/
@@ -67,18 +81,22 @@ Each routed frontend feature follows `index.tsx` (logic) / `model.ts` (types) / 
 cd server
 dotnet run
 ```
-API runs at `https://localhost:64868` (HTTP: `http://localhost:64869`) · Swagger UI at `https://localhost:64868/swagger` (Development only)
+API runs at `https://localhost:64868` (HTTP: `http://localhost:64869`). Swagger UI at `https://localhost:64868/swagger` (Development only).
 
-Everything below is optional for local dev — sensible fallbacks live in `server/Program.cs` / `appsettings.json`:
+Everything below is optional for local dev - sensible fallbacks live in `server/Program.cs` / `appsettings.json`:
 
 | Variable | Purpose | Local fallback |
 |---|---|---|
 | `DATABASE_URL` | Postgres connection string | `ConnectionStrings:DefaultConnection` (`localhost:5432`, db `doorstop`) |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173,https://localhost:5173` |
-| `SUPABASE_URL` (or `Supabase:Url`) | Enables JWT auth enforcement | unset → auth is effectively disabled locally |
-| `Xero:ClientId` / `Xero:ClientSecret` / `Xero:RedirectUri` / `Xero:FrontendUrl` | Xero OAuth2 app credentials | blank → Xero endpoints won't complete the OAuth flow |
+| `SUPABASE_URL` (or `Supabase:Url`) | Enables JWT auth enforcement | unset -> auth is effectively disabled locally |
+| `Xero:ClientId` / `Xero:ClientSecret` / `Xero:RedirectUri` / `Xero:FrontendUrl` | Xero OAuth2 app credentials | blank -> Xero endpoints won't complete the OAuth flow |
+| `RATE_LIMIT_PERMIT_LIMIT` | Requests allowed per client IP per window | `100` |
+| `RATE_LIMIT_WINDOW_SECONDS` | Length of the rate limit window, in seconds | `60` |
 
-The database schema is created via EF Core's `EnsureCreated()` on startup — there are no migrations, so schema changes to an already-provisioned database need to be applied out-of-band (e.g. via the Neon SQL editor).
+The database schema has no EF Core migration history in the repo (the `server/Migrations/` folder was intentionally removed). The production schema was applied by hand (see git history for the SQL that did it) and now exists independently of any migration record. `Program.cs` does not call `EnsureCreated()` or `Database.Migrate()` on startup - nothing in the app creates or alters the schema automatically, so schema changes need to be applied out-of-band (e.g. via the Neon SQL editor) when deploying.
+
+`GET /health` reports basic liveness/DB-connectivity.
 
 ### Frontend
 ```bash
@@ -86,6 +104,14 @@ npm run setup   # prompts for the API URL, writes .env, installs dependencies
 npm start       # dev server at http://localhost:5173
 ```
 Reads `VITE_API_URL` (falls back to `https://localhost:64868`).
+
+## Testing
+
+```bash
+npm test                                              # frontend (Vitest)
+dotnet test server/BusinessApi.Tests                  # backend (xUnit)
+```
+Both suites run in CI (`.github/workflows/ci.yml`) on every push to `main` and on pull requests, alongside a type-check and production build of the frontend.
 
 ## API
 
@@ -102,7 +128,7 @@ Full CRUD REST API for every resource (`GET /resource`, `GET /resource/{id}`, `P
 | HandleType | `/handle-type` | `?finish=`, `?mechanism=` filters |
 | HingeType | `/hinge-type` | |
 | JambType | `/jamb-type` | |
-| JambRequirement | `/jamb-requirement` | metres-of-jamb lookup (unit type × height) |
+| JambRequirement | `/jamb-requirement` | metres-of-jamb lookup (unit type x height) |
 | CavitySliderType | `/cavity-slider` | `?supplier=`, `?heightMm=`, `?category=`, `?isPOA=` filters |
 | TrackType | `/track-type` | `?supplier=`, `?trackTypeName=` filters |
 | Product | `/product` | bundles catalogue items + custom lines into a sellable unit |
@@ -114,4 +140,5 @@ Backend ships via the root `Dockerfile` (targets Render); frontend is a static V
 
 ## Status
 
-v0.1.0 — actively developed. Real Postgres (Neon), real Supabase auth, real Xero OAuth2 integration. No automated tests yet.
+v1.0.0, actively developed. Real Postgres (Neon), real Supabase auth, real Xero OAuth2 integration.
+
