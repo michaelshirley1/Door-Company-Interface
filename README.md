@@ -1,13 +1,19 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/assets/logo-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="public/assets/logo-light.svg">
-    <img src="public/assets/logo-light.svg" width="72" alt="DoorStop logo">
-  </picture>
-</p>
+<table align="center">
+  <tr>
+    <td valign="middle">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="public/assets/logo-dark.svg">
+        <source media="(prefers-color-scheme: light)" srcset="public/assets/logo-light.svg">
+        <img src="public/assets/logo-light.svg" width="72" alt="DoorStop logo">
+      </picture>
+    </td>
+    <td valign="middle" style="padding-left: 12px;">
+      <h1>DoorStop</h1>
+    </td>
+  </tr>
+</table>
 
-<h1 align="center">DoorStop</h1>
-<p align="center">Internal management dashboard for a door company.</p>
+<p align="center">Internal management dashboard.</p>
 
 <p align="center">
   <img alt="CI" src="https://github.com/michaelshirley1/door-manager-prod/actions/workflows/ci.yml/badge.svg">
@@ -19,9 +25,9 @@
 Manage jobs, quotes, customers, invoices, purchase orders, and a full hardware/product catalogue from a single dashboard, with Xero invoicing built in.
 
 <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items:flex-start;">
-  <img width="1911" height="853" alt="image" src="https://github.com/user-attachments/assets/1feb2103-f0bb-4129-8905-1fad123dde2b" />
-  <img width="1898" height="914" alt="image" src="https://github.com/user-attachments/assets/e4d05152-a06a-4506-b57e-e241d600d396" />
-  <img width="1900" height="910" alt="image" src="https://github.com/user-attachments/assets/acc13bb5-5b6b-444a-8e5c-4fb8e3c9432e" />
+  <img width="1907" height="908" alt="image" src="https://github.com/user-attachments/assets/5aa17b8d-ff67-40b8-ace6-6a77fe66b272" />
+  <img width="1911" height="916" alt="image" src="https://github.com/user-attachments/assets/bb2ab2cc-ef9b-4fad-ba70-89109592215b" />
+  <img width="1902" height="913" alt="image" src="https://github.com/user-attachments/assets/1f241ebb-2a9a-44d0-8551-ce9c22f84b44" />
 </div>
 
 ## What it does
