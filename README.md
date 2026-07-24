@@ -22,6 +22,10 @@
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-4.9-3178C6">
 </p>
 
+<p align="center">
+  THIS IS A NEUTERED VERSION - FULL VERSION AVALIABLE ON REQUEST
+</p>
+
 Manage jobs, quotes, customers, invoices, purchase orders, and a full hardware/product catalogue from a single dashboard, with Xero invoicing built in.
 
 <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items:flex-start;">
